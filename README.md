@@ -1,10 +1,26 @@
-# salesforce
+# Salesforce
 
-A Clojure library designed to ... well, that part is up to you.
+Helpers for working with the Salesforce.com REST API
+
+## Settings
 
 ## Usage
 
-FIXME
+Authentication
+
+```clojure
+(def conf
+  (ref
+    {:client-id ""
+     :client-secret ""
+     :username ""
+     :password ""
+     :security-token ""})
+
+;; Get an authentication token for requests
+(def my-token (:auth_token (auth! @conf)))
+
+```
 
 ## License
 

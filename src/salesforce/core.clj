@@ -76,8 +76,8 @@
     (request :get (format "/services/data/v%s/" +version+) token)))
 
 (defn s-objects [token]
-  (let [version (version token)]
-    (request :get (format "/services/data/v%s/sobjects/" version) token)))
+  (with-version token
+    (request :get (format "/services/data/v%s/sobjects/" +version+) token)))
 
 (defn s-object-names
   "Returns the name of the sobject and the url"
