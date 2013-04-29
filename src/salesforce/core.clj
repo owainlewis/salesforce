@@ -10,19 +10,39 @@
   `(binding [+token+ ~token]
      (do ~@body)))
 
+;; Salesforce config variables
+;; ******************************************************************************
+
+(def ^:dynamic conf
+  (ref (binding [*read-eval* false]
+         (with-open [r (clojure.java.io/reader "settings.clj")]
+           (read (java.io.PushbackReader. r))))))
+
+;; Authentication and request helpers
+;; ******************************************************************************
+
 (defn auth!
-  "Get security token"
+  "Get security token and auth info from Salesforce
+   config is a map in the form
+   - client-id ID
+   - client-secret SECRET
+   - username USERNAME
+   - password PASSWORD
+   - security-token TOKEN"
   [{:keys [client-id client-secret username password security-token]}]
-     (let [params {:grant_type "password"
+     (let [auth-url "https://login.salesforce.com/services/oauth2/token"
+           params {:grant_type "password"
                    :client_id client-id
                    :client_secret client-secret
                    :username username
                    :password (str password security-token)
                    :format "json"}
-           resp (http/post "https://login.salesforce.com/services/oauth2/token" {:form-params params :as :json})]
-       (:body resp)))
+           resp (http/post auth-url {:form-params params})]
+       (-> (:body resp) (json/decode true))))
 
-(defn request [method url token]
+(defn ^:private request
+  "Make a HTTP request to the Salesforce.com REST API"
+  [method url token]
   (let [base-url (instance-url token)]
     (->
       (http/request
@@ -31,6 +51,9 @@
          :headers {"Authorization" (str "Bearer " (:access_token token))}})
       :body
       (json/decode true))))
+
+;; API
+;; ******************************************************************************
 
 (defn instance-url [token]
   (:instance_url token))
@@ -42,8 +65,15 @@
     (if-let [version ((comp :version first) response)]
       version)))
 
+(defonce ^:dynamic +version+ nil)
+
+(defmacro with-version [token & body]
+  `(binding [+version+ (version ~token)]
+     (do ~@body)))
+
 (defn resources [token]
-  (request :get "/services/data/v20.0/" token))
+  (with-version token
+    (request :get (format "/services/data/v%s/" +version+) token)))
 
 (defn s-objects [token]
   (let [version (version token)]
