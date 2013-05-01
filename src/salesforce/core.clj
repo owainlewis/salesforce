@@ -38,16 +38,21 @@
                    :password (str password security-token)
                    :format "json"}
            resp (http/post auth-url {:form-params params})]
-       (-> (:body resp) (json/decode true))))
+       (-> (:body resp)
+           (json/decode true))))
+
+(defn token [] (:access_token (auth! @conf)))
 
 (defn ^:private request
-  "Make a HTTP request to the Salesforce.com REST API"
+  "Make a HTTP request to the Salesforce.com REST API
+   Token is the full map returned from (auth! @conf)"
   [method url token]
-  (let [base-url (instance-url token)]
+  (let [base-url (:instance_url token)
+        full-url (str base-url url)]
     (->
       (http/request
         {:method method
-         :url (str base-url url)
+         :url full-url
          :headers {"Authorization" (str "Bearer " (:access_token token))}})
       :body
       (json/decode true))))
@@ -57,6 +62,22 @@
 
 (defn instance-url [token]
   (:instance_url token))
+
+(defn all-versions
+  "Lists all available versions of the Salesforce REST API"
+  []
+  (->> (http/get "http://na1.salesforce.com/services/data/")
+       :body
+       (json/parse-string)))
+
+(defn latest-version
+  "What is the latest API version?"
+  []
+  (->> (all-versions)
+       last
+       (map (fn [[k _]] [(keyword k) _]))
+       (into {})
+       :version))
 
 (defn version
   "Get the Salesforce API version"
@@ -85,4 +106,27 @@
   (->> (s-objects token)
        :sobjects
        (map (juxt :name (comp :sobject :urls)))))
+
+(defn object
+  "Fetch a single SObject"
+  [sobject token]
+  (with-version token
+    (request :get
+      (format "/services/data/v%s/sobjects/%s" +version+ sobject) token)))
+
+(defn object-describe
+  "Describe an SObject"
+  [sobject token]
+  (with-version token
+    (request :get
+      (format "/services/data/v%s/sobjects/%s/describe" +version+ sobject) token)))
+
+(comment
+  (object-describe "Account" token))
+
+(defn recent-items
+  "Returns recently created items for an SObject"
+  [sobject token]
+  (let [response (object sobject token)]
+    (:recentItems response)))
 
