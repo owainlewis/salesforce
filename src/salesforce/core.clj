@@ -73,8 +73,7 @@
 (defn latest-version
   "What is the latest API version?"
   []
-  (->> (all-versions)
-       last
+  (->> (last (all-versions))
        (map (fn [[k _]] [(keyword k) _]))
        (into {})
        :version))
