@@ -229,8 +229,8 @@
   [version query]
   (let [url  (format "/services/data/v%s/query" version)
         soql (->> (str/split query #"\s+")
-                   (interpose "+")
-                   str/join)]
+                  (interpose "+")
+                  str/join)]
     (apply str [url "?q=" soql])))
 
 (defn soql
