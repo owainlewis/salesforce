@@ -9,19 +9,10 @@ the API to be a bit frustrating and hopefully this wrapper will make everything 
 
 We first need to set up some authentication information as a Clojure map. All the information can be found in your Salesforce account.
 
-```clojure
-{:client-id ""
- :client-secret ""
- :username ""
- :password ""
- :security-token ""})
-```
-
 In order to get an auth token and information about your account we call the auth! function
 like this
 
 ```clojure
-
 (def config
   {:client-id ""
    :client-secret ""
@@ -51,6 +42,8 @@ Now you can use your auth-config to make requests to the API.
 ```
 
 ## SObjects
+
+The following methods are available
 
 + so->all
 + so->get
@@ -86,7 +79,7 @@ Delete a record
 (so->delete "Account" "001i0000008Ge2OAAS" auth-info)
 ```
 
-Describe an SObject
+Describe an record
 
 ```clojure
 (so->describe "Account" auth-info)

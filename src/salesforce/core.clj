@@ -20,7 +20,7 @@
   `(binding [+token+ ~token]
      (do ~@body)))
 
-(defn as-json
+(defn ^:private as-json
   "Takes a Clojure map and returns a JSON string"
   [map]
   (json/generate-string map))
@@ -198,7 +198,7 @@
 ;; Salesforce Object Query Language
 ;; *******************************************************
 
-(defn gen-query-url
+(defn ^:private gen-query-url
   "Given an SOQL string, i.e \"SELECT name from Account\"
    generate a Salesforce SOQL query url in the form:
    /services/data/v20.0/query/?q=SELECT+name+from+Account"
