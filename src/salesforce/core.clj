@@ -121,7 +121,7 @@
      (do ~@body)))
 
 (defmacro with-explicit-version [v & forms]
-  `(binding [+version+ v] (do ~@forms)))
+  `(binding [+version+ ~v] (do ~@forms)))
 
 ;; Resources
 
