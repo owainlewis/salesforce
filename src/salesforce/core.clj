@@ -10,6 +10,11 @@
   `(binding [+token+ ~token]
      (do ~@body)))
 
+(defn as-json
+  "Takes a Clojure map and returns a JSON string"
+  [map]
+  (json/generate-string map))
+
 ;; Salesforce config variables
 ;; ******************************************************************************
 
@@ -41,27 +46,34 @@
        (-> (:body resp)
            (json/decode true))))
 
-(defn token [] (:access_token (auth! @conf)))
+(defn token [auth] (:access_token auth))
+
+(defn instance-url [auth] (:instance_url auth))
 
 (defn ^:private request
   "Make a HTTP request to the Salesforce.com REST API
    Token is the full map returned from (auth! @conf)"
-  [method url token]
-  (let [base-url (:instance_url token)
-        full-url (str base-url url)]
-    (->
-      (http/request
-        {:method method
-         :url full-url
-         :headers {"Authorization" (str "Bearer " (:access_token token))}})
-      :body
-      (json/decode true))))
+  [method url token & params]
+  (with-meta
+    (let [base-url (:instance_url token)
+          full-url (str base-url url)]
+      (->
+        (http/request
+          (merge (or (first params) {})
+            {:method method
+             :url full-url
+             :headers {"Authorization" (str "Bearer " (:access_token token))}}))
+        :body
+        (json/decode true)))
+        {:method method :url url :token token :params params}))
+
+(defn safe-request
+  "Perform a request but catch any exceptions"
+  [method url token & params]
+  (try (request method url token params) (catch Exception e (prn e))))
 
 ;; API
 ;; ******************************************************************************
-
-(defn instance-url [token]
-  (:instance_url token))
 
 (defn all-versions
   "Lists all available versions of the Salesforce REST API"
@@ -119,6 +131,16 @@
   (with-version token
     (request :get
       (format "/services/data/v%s/sobjects/%s/describe" +version+ sobject) token)))
+
+(defn create-record
+  "Create a new record"
+  [type record token]
+  (let [params
+    { :form-params {:params (as-json record)}
+      :content-type :json }]
+    (with-version token
+      (request :post
+        (format "/services/data/v%s/sobjects/Account/" +version+) token params))))
 
 (comment
   (object-describe "Account" token))
