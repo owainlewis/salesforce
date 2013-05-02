@@ -1,29 +1,73 @@
 # Salesforce
 
-Helpers for working with the Salesforce.com REST API
+This is an up to date wrapper for the Salesforce.com REST API. I initially found working with
+the API to be a bit frustrating and hopefully this wrapper will make everything easy for you.
 
 ## Settings
 
 ## Usage
 
-Authentication
+We first need to set up some authentication information as a Clojure map. All the information can be found in your Salesforce account.
 
 ```clojure
-(def conf
-  (ref
-    {:client-id ""
-     :client-secret ""
-     :username ""
-     :password ""
-     :security-token ""})
+{:client-id ""
+ :client-secret ""
+ :username ""
+ :password ""
+ :security-token ""})
+```
 
-;; Get an authentication token for requests
-(def my-token (:auth_token (auth! @conf)))
+In order to get an auth token and information about your account we call the auth! function
+like this
 
+```clojure
+
+(def config
+  {:client-id ""
+   :client-secret ""
+   :username ""
+   :password ""
+   :security-token ""})
+
+(def auth-info (auth! config))
+```
+
+This returns a map of information about your account including an authorization token that will allow you to make requests to the REST API.
+
+The repsonse looks something like this
+
+```clojure
+{:id "https://login.salesforce.com/id/1234",
+ :issued_at "1367488271359",
+ :instance_url "https://na15.salesforce.com",
+ :signature "1234",
+ :access_token "1234"}
+```
+
+Now you can use your auth-config to make requests to the API.
+
+```clojure
+(resources auth-info)
+```
+
+## SObjects
+
+Describe an SObject
+
+```clojure
+(object-describe "Account" auth-info)
+```
+
+## Salesforce Object Query Language
+
+Salesforce provides a query language called SOQL that lets you run custom queries on the API.
+
+```clojure
+(execute-soql "SELECT name from Account" (auth! @conf))
 ```
 
 ## License
 
-Copyright © 2013 FIXME
+Copyright © 2013 Owain Lewis
 
 Distributed under the Eclipse Public License, the same as Clojure.

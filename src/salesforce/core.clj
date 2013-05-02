@@ -85,7 +85,7 @@
     (if-let [version ((comp :version first) response)]
       version)))
 
-(defonce ^:dynamic +version+ nil)
+(defonce ^:dynamic +version+ "")
 
 (defmacro with-version [token & body]
   `(binding [+version+ (version ~token)]
@@ -128,4 +128,24 @@
   [sobject token]
   (let [response (object sobject token)]
     (:recentItems response)))
+
+;; Salesforce Object Query Language
+
+(defn gen-query-url
+  "Given an SOQL string, i.e \"SELECT name from Account\"
+   generate a Salesforce SOQL query url in the form:
+   /services/data/v20.0/query/?q=SELECT+name+from+Account"
+  [query]
+  (let [url  (format "/services/data/v%s/query/" +version+)
+        soql (->> (clojure.string/split query #"\s+")
+                   (interpose "+")
+                   clojure.string/join)]
+    (apply str [url "?q=" soql])))
+
+(defn execute-soql
+  "Executes an arbitrary SOQL query
+   i.e SELECT name from Account"
+  [query token]
+  (with-version token
+    (request :get (gen-query-url query) token)))
 
