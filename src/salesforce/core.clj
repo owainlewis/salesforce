@@ -78,7 +78,11 @@
 (defn ^:private safe-request
   "Perform a request but catch any exceptions"
   [method url token & params]
-  (try (request method url token params) (catch Exception e e)))
+  (try
+    (with-meta
+      (request method url token params)
+      {:method method :url url :token token})
+  (catch Exception e (.toString e))))
 
 ;; API
 ;; ******************************************************************************
