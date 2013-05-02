@@ -60,6 +60,9 @@
 
 (defn instance-url [auth] (:instance_url auth))
 
+;; HTTP request functions
+;; ******************************************************************************
+
 (defn ^:private request
   "Make a HTTP request to the Salesforce.com REST API
    Token is the full map returned from (auth! @conf)"
@@ -86,6 +89,8 @@
 
 ;; API
 ;; ******************************************************************************
+
+;; Version information
 
 (defn all-versions
   "Lists all available versions of the Salesforce REST API"
@@ -115,6 +120,8 @@
   `(binding [+version+ (version ~token)]
      (do ~@body)))
 
+;; Resources
+
 (defn resources [token]
   (with-version token
     (request :get (format "/services/data/v%s/" +version+) token)))
@@ -129,6 +136,9 @@
   (->> (s-objects token)
        :sobjects
        (map (juxt :name (comp :sobject :urls)))))
+
+;; Core API methods
+;; ******************************************************************************
 
 (defn so->get
   "Fetch a single SObject or passing in a vector of attributes
