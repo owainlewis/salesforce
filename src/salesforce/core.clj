@@ -108,17 +108,10 @@
        (into {})
        :version))
 
-(defn version
-  "Get the Salesforce API version"
-  [token]
-  (let [response (request :get "/services/data/" token)]
-    (if-let [version ((comp :version first) response)]
-      version)))
+(defonce ^:dynamic +version+ (latest-version))
 
-(defonce ^:dynamic +version+ "")
-
-(defmacro with-version [token & forms]
-  `(binding [+version+ (version ~token)]
+(defmacro with-latest-version [& forms]
+  `(binding [+version+ (latest-version)]
      (do ~@forms)))
 
 (defmacro with-explicit-version [v & forms]
@@ -127,15 +120,15 @@
 ;; Resources
 
 (defn resources [token]
-  (with-version token
+  (with-latest-version
     (request :get (format "/services/data/v%s/" +version+) token)))
 
 ;; Core API methods
 ;; ******************************************************************************
 
-(defn so->all [token]
-  (with-version token
-    (request :get (format "/services/data/v%s/sobjects/" +version+) token)))
+(defn so->all [sobject token]
+  (with-latest-version
+    (request :get (format "/services/data/v%s/sobjects/%s" +version+ sobject) token)))
 
 (defn s-object-names
   "Returns the name of the sobject and the url"
@@ -158,13 +151,13 @@
                          (str/join)
                          (conj ["?fields="])
                          (apply str))]
-  (with-version token
+  (with-latest-version
     (let [uri (format "/services/data/v%s/sobjects/%s/%s%s"
                  +version+ sobject identifier params)
           response (request :get uri token)]
       (dissoc response :attributes))))))
   ([sobject identifier token]
-  (with-version token
+  (with-latest-version
     (request :get
       (format "/services/data/v%s/sobjects/%s/%s" +version+ sobject identifier) token))))
 
@@ -177,7 +170,7 @@
 (defn so->describe
   "Describe an SObject"
   [sobject token]
-  (with-version token
+  (with-latest-version
     (request :get
       (format "/services/data/v%s/sobjects/%s/describe" +version+ sobject) token)))
 
@@ -190,7 +183,7 @@
   (let [params
     { :form-params record
       :content-type :json }]
-    (with-version token
+    (with-latest-version
       (request :post
         (format "/services/data/v%s/sobjects/Account/" +version+) token params))))
 
@@ -205,7 +198,7 @@
    - identifier the object id
    - token your api auth info"
   [sobject identifier token]
-  (with-version token
+  (with-latest-version
     (request :delete
       (format "/services/data/v%s/sobjects/%s/%s" +version+ sobject identifier)
       token)))
@@ -237,7 +230,7 @@
   "Executes an arbitrary SOQL query
    i.e SELECT name from Account"
   [query token]
-  (with-version token
+  (with-latest-version
     (request :get (gen-query-url +version+ query) token)))
 
 (comment
