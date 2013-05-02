@@ -52,10 +52,44 @@ Now you can use your auth-config to make requests to the API.
 
 ## SObjects
 
++ so->all
++ so->get
++ so->create
++ so->update
++ so->delete
++ so->describe
+
+Get all records
+
+```clojure
+
+```
+
+Get a single record
+
+```clojure
+;; Fetch all the info
+(so->get "Account" "001i0000007nAs3" auth-info)
+;; Fetch only the name and website attributes
+(so->get "Account" "001i0000007nAs3" ["Name" "Website"] auth-info))
+```
+
+Create a record
+
+```clojure
+(so->create "Account" {:Name "My Account"} auth-info)
+```
+
+Delete a record
+
+```clojure
+(so->delete "Account" "001i0000008Ge2OAAS" auth-info)
+```
+
 Describe an SObject
 
 ```clojure
-(object-describe "Account" auth-info)
+(so->describe "Account" auth-info)
 ```
 
 ## Salesforce Object Query Language
@@ -63,7 +97,7 @@ Describe an SObject
 Salesforce provides a query language called SOQL that lets you run custom queries on the API.
 
 ```clojure
-(execute-soql "SELECT name from Account" (auth! @conf))
+(soql "SELECT name from Account" auth-info)
 ```
 
 ## License

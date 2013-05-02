@@ -1,3 +1,13 @@
+;; *****************************************
+;;
+;; Salesforce API wrapper
+;;
+;; 2013 Owain Lewis <owain@owainlewis.com>
+;;
+;; See README.md for documentation
+;;
+;; *****************************************
+
 (ns salesforce.core
   (:require
     [cheshire.core :as json]
@@ -54,23 +64,21 @@
   "Make a HTTP request to the Salesforce.com REST API
    Token is the full map returned from (auth! @conf)"
   [method url token & params]
-  (with-meta
-    (let [base-url (:instance_url token)
-          full-url (str base-url url)]
-      (->
-        (http/request
-          (merge (or (first params) {})
-            {:method method
-             :url full-url
-             :headers {"Authorization" (str "Bearer " (:access_token token))}}))
-        :body
-        (json/decode true)))
-        {:method method :url url :token token :params params}))
+  (let [base-url (:instance_url token)
+        full-url (str base-url url)]
+    (->
+      (http/request
+        (merge (or (first params) {})
+          {:method method
+           :url full-url
+           :headers {"Authorization" (str "Bearer " (:access_token token))}}))
+      :body
+      (json/decode true))))
 
 (defn safe-request
   "Perform a request but catch any exceptions"
   [method url token & params]
-  (try (request method url token params) (catch Exception e (prn e))))
+  (try (request method url token params) (catch Exception e e)))
 
 ;; API
 ;; ******************************************************************************
@@ -118,56 +126,96 @@
        :sobjects
        (map (juxt :name (comp :sobject :urls)))))
 
-(defn object
-  "Fetch a single SObject"
-  [sobject token]
+(defn so->get
+  "Fetch a single SObject or passing in a vector of attributes
+   return a subset of the data"
+  ([sobject identifier fields token]
+     (let [params (->> (into [] (interpose "," fields))
+                       (clojure.string/join)
+                       (conj ["?fields="])
+                       (apply str))]
+  (with-version token
+    (let [uri (format "/services/data/v%s/sobjects/%s/%s%s"
+                 +version+ sobject identifier params)
+          response (request :get uri token)]
+      (dissoc response :attributes)))))
+  ([sobject identifier token]
   (with-version token
     (request :get
-      (format "/services/data/v%s/sobjects/%s" +version+ sobject) token)))
+      (format "/services/data/v%s/sobjects/%s/%s" +version+ sobject identifier) token))))
 
-(defn object-describe
+(comment
+  ;; Fetch all the info
+  (so->get "Account" "001i0000007nAs3" auth-info)
+  ;; Fetch only the name and website attribute
+  (so->get "Account" "001i0000007nAs3" ["Name" "Website"] auth-info))
+
+(defn so->describe
   "Describe an SObject"
   [sobject token]
   (with-version token
     (request :get
       (format "/services/data/v%s/sobjects/%s/describe" +version+ sobject) token)))
 
-(defn create-record
+(comment
+  (describe "Account" token))
+
+(defn so->create
   "Create a new record"
   [type record token]
   (let [params
-    { :form-params {:params (as-json record)}
+    { :form-params record
       :content-type :json }]
     (with-version token
       (request :post
         (format "/services/data/v%s/sobjects/Account/" +version+) token params))))
 
 (comment
-  (object-describe "Account" token))
+  (create "Account" {:Name "My account"} (auth! @conf)))
+
+(defn so->update [])
+
+(defn so->delete
+  "Delete a record
+   - sojbect the name of the object i.e Account
+   - identifier the object id
+   - token your api auth info"
+  [sobject identifier token]
+  (with-version token
+    (request :delete
+      (format "/services/data/v%s/sobjects/%s/%s" +version+ sobject identifier)
+      token)))
+
+(comment
+  (delete "Account" "001i0000008Ge2OAAS" (auth! @conf)))
 
 (defn recent-items
   "Returns recently created items for an SObject"
   [sobject token]
-  (let [response (object sobject token)]
+  (let [response (so->get sobject token)]
     (:recentItems response)))
 
 ;; Salesforce Object Query Language
+;; *******************************************************
 
 (defn gen-query-url
   "Given an SOQL string, i.e \"SELECT name from Account\"
    generate a Salesforce SOQL query url in the form:
    /services/data/v20.0/query/?q=SELECT+name+from+Account"
-  [query]
-  (let [url  (format "/services/data/v%s/query/" +version+)
+  [version query]
+  (let [url  (format "/services/data/v%s/query" version)
         soql (->> (clojure.string/split query #"\s+")
                    (interpose "+")
                    clojure.string/join)]
     (apply str [url "?q=" soql])))
 
-(defn execute-soql
+(defn soql
   "Executes an arbitrary SOQL query
    i.e SELECT name from Account"
   [query token]
   (with-version token
-    (request :get (gen-query-url query) token)))
+    (request :get (gen-query-url +version+ query) token)))
+
+(comment
+  (soql "SELECT name from Account" (auth! @conf)))
 
