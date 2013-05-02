@@ -10,6 +10,7 @@
 
 (ns salesforce.core
   (:require
+    [clojure.string :as str]
     [cheshire.core :as json]
     [clj-http.client :as http]))
 
@@ -148,7 +149,7 @@
    return a subset of the data"
   ([sobject identifier fields token]
      (let [params (->> (into [] (interpose "," fields))
-                       (clojure.string/join)
+                       (str/join)
                        (conj ["?fields="])
                        (apply str))]
   (with-version token
@@ -221,9 +222,9 @@
    /services/data/v20.0/query/?q=SELECT+name+from+Account"
   [version query]
   (let [url  (format "/services/data/v%s/query" version)
-        soql (->> (clojure.string/split query #"\s+")
+        soql (->> (str/split query #"\s+")
                    (interpose "+")
-                   clojure.string/join)]
+                   str/join)]
     (apply str [url "?q=" soql])))
 
 (defn soql
