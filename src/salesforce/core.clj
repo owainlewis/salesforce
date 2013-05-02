@@ -148,15 +148,16 @@
   "Fetch a single SObject or passing in a vector of attributes
    return a subset of the data"
   ([sobject identifier fields token]
-     (let [params (->> (into [] (interpose "," fields))
-                       (str/join)
-                       (conj ["?fields="])
-                       (apply str))]
+     (when (or (seq? fields) (vector? fields))
+       (let [params (->> (into [] (interpose "," fields))
+                         (str/join)
+                         (conj ["?fields="])
+                         (apply str))]
   (with-version token
     (let [uri (format "/services/data/v%s/sobjects/%s/%s%s"
                  +version+ sobject identifier params)
           response (request :get uri token)]
-      (dissoc response :attributes)))))
+      (dissoc response :attributes))))))
   ([sobject identifier token]
   (with-version token
     (request :get
