@@ -29,9 +29,9 @@
 ;; Salesforce config variables
 ;; ******************************************************************************
 
-(def ^:dynamic conf
+(defn conf [f]
   (ref (binding [*read-eval* false]
-         (with-open [r (clojure.java.io/reader "settings.clj")]
+         (with-open [r (clojure.java.io/reader f)]
            (read (java.io.PushbackReader. r))))))
 
 ;; Authentication and request helpers

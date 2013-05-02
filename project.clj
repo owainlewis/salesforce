@@ -1,4 +1,4 @@
-(defproject salesforce "0.1.0-SNAPSHOT"
+(defproject salesforce "0.1.1-SNAPSHOT"
   :description "A clojure library for accessing the salesforce api"
   :url "http://owainlewis.com"
   :license {:name "Eclipse Public License"
