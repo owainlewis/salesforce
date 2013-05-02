@@ -17,9 +17,9 @@
 (def ^:dynamic +token+ nil)
 
 (defmacro with-token
-  [token & body]
+  [token & forms]
   `(binding [+token+ ~token]
-     (do ~@body)))
+     (do ~@forms)))
 
 (defn ^:private as-json
   "Takes a Clojure map and returns a JSON string"
@@ -117,9 +117,9 @@
 
 (defonce ^:dynamic +version+ "")
 
-(defmacro with-version [token & body]
+(defmacro with-version [token & forms]
   `(binding [+version+ (version ~token)]
-     (do ~@body)))
+     (do ~@forms)))
 
 (defmacro with-explicit-version [v & forms]
   `(binding [+version+ ~v] (do ~@forms)))
