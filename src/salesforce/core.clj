@@ -75,7 +75,7 @@
       :body
       (json/decode true))))
 
-(defn safe-request
+(defn ^:private safe-request
   "Perform a request but catch any exceptions"
   [method url token & params]
   (try (request method url token params) (catch Exception e e)))
