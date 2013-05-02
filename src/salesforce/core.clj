@@ -130,19 +130,24 @@
   (with-version token
     (request :get (format "/services/data/v%s/" +version+) token)))
 
-(defn s-objects [token]
+;; Core API methods
+;; ******************************************************************************
+
+(defn so->all [token]
   (with-version token
     (request :get (format "/services/data/v%s/sobjects/" +version+) token)))
 
 (defn s-object-names
   "Returns the name of the sobject and the url"
   [token]
-  (->> (s-objects token)
+  (->> (so->all token)
        :sobjects
        (map (juxt :name (comp :sobject :urls)))))
 
-;; Core API methods
-;; ******************************************************************************
+(defn print-s-objects [token]
+  (let [objects (map first (s-object-names token))]
+    (doseq [o objects]
+      (println o))))
 
 (defn so->get
   "Fetch a single SObject or passing in a vector of attributes
