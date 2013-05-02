@@ -3,7 +3,17 @@
 This is an up to date wrapper for the Salesforce.com REST API. I initially found working with
 the API to be a bit frustrating and hopefully this wrapper will make everything easy for you.
 
-## Settings
+More information about the Salesforce REST API can be found at
+
+http://www.salesforce.com/us/developer/docs/api_rest/
+
+## How do I use it?
+
+It is available from Clojars. : )
+
+```
+[salesforce "0.1.0-SNAPSHOT"]
+```
 
 ## Usage
 
@@ -25,7 +35,7 @@ like this
 
 This returns a map of information about your account including an authorization token that will allow you to make requests to the REST API.
 
-The repsonse looks something like this
+The response looks something like this
 
 ```clojure
 {:id "https://login.salesforce.com/id/1234",
