@@ -120,6 +120,9 @@
   `(binding [+version+ (version ~token)]
      (do ~@body)))
 
+(defnmacro with-explicit-version [v & forms]
+  `(binding [+version+ v] (do ~@forms)))
+
 ;; Resources
 
 (defn resources [token]
