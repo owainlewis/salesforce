@@ -108,7 +108,7 @@
        (into {})
        :version))
 
-(defonce ^:dynamic +version+ (latest-version))
+(defonce ^{:dynamic true :private true} +version+ "")
 
 (defmacro with-latest-version [& forms]
   `(binding [+version+ (latest-version)]
