@@ -14,13 +14,9 @@
    :signature "SIG",
    :access_token "ACCESS"})
 
-(deftest token-test
-  (testing "should extract the auth token"
-    (is (= "ACCESS" (token sample-auth)))))
-
-(deftest instance-url-test
-  (testing "should extract the instance url"
-    (is (= "https://na15.salesforce.com" (instance-url sample-auth)))))
+(deftest with-version-test
+  (testing "should set +version+ to a given string"
+    (is (= "26.0" (with-version "26.0" @+version+)))))
 
 ;; Private functions
 
@@ -29,3 +25,4 @@
     (testing "should generate a valid url for salesforce.com"
       (let [url (gen-query-url "20.0" "SELECT name from Account")]
         (is (= url "/services/data/v20.0/query?q=SELECT+name+from+Account"))))))
+
