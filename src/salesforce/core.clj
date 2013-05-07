@@ -2,8 +2,6 @@
 ;;
 ;; Salesforce API wrapper
 ;;
-;; 2013 Owain Lewis <owain@owainlewis.com>
-;;
 ;; See README.md for documentation
 ;;
 ;; *****************************************
@@ -88,7 +86,7 @@
 ;; API
 ;; ******************************************************************************
 
-;; Version information
+;; Salesforce API version information
 
 (defn all-versions
   "Lists all available versions of the Salesforce REST API"
@@ -105,30 +103,46 @@
        (into {})
        :version))
 
-(defonce ^{:dynamic true :private true} +version+ "")
+(defonce ^{:dynamic true :private true} +version+ (atom "27.0"))
+
+(defn set-version! [v]
+  (reset! +version+ (atom v)))
 
 (defmacro with-latest-version [& forms]
-  `(binding [+version+ (latest-version)]
+  `(binding [+version+ (atom (latest-version))]
      (do ~@forms)))
 
 (defmacro with-version [v & forms]
-  `(binding [+version+ ~v] (do ~@forms)))
+  `(binding [+version+ (atom ~v)] (do ~@forms)))
 
 ;; Resources
 
 (defn resources [token]
-  (request :get (format "/services/data/v%s/" +version+) token))
+  (request :get (format "/services/data/v%s/" @+version+) token))
 
 ;; Core API methods
 ;; ******************************************************************************
 
-(defn so->all [sobject token]
-  (request :get (format "/services/data/v%s/sobjects/%s" +version+ sobject) token))
+(defn so->objects
+  "Lists all of the available sobjects"
+  [token]
+  (request :get (format "/services/data/v%s/sobjects" @+version+) token))
+
+(defn so->all
+  "All sobjects i.e (so->all \"Account\" auth-info)"
+  [sobject token]
+  (request :get (format "/services/data/v%s/sobjects/%s" @+version+ sobject) token))
+
+(defn so->recent
+  "The recently created items under an sobject identifier
+   e.g (so->recent \"Account\" auth-info)"
+  [sobject token]
+  (:recentItems (so->all sobject token)))
 
 (defn s-object-names
   "Returns the name of the sobject and the url"
   [token]
-  (->> (so->all token)
+  (->> (so->objects token)
        :sobjects
        (map (juxt :name (comp :sobject :urls)))))
 
@@ -147,27 +161,27 @@
                          (conj ["?fields="])
                          (apply str))
              uri (format "/services/data/v%s/sobjects/%s/%s%s"
-                           +version+ sobject identifier params)
+                   @+version+ sobject identifier params)
              response (request :get uri token)]
          (dissoc response :attributes))))
   ([sobject identifier token]
     (request :get
-      (format "/services/data/v%s/sobjects/%s/%s" +version+ sobject identifier) token)))
+     (format "/services/data/v%s/sobjects/%s/%s" @+version+ sobject identifier) token)))
 
 (comment
   ;; Fetch all the info
-  (so->get "Account" "001i0000007nAs3" auth-info)
+  (so->get "Account" "001i0000007nAs3" auth)
   ;; Fetch only the name and website attribute
-  (so->get "Account" "001i0000007nAs3" ["Name" "Website"] auth-info))
+  (so->get "Account" "001i0000007nAs3" ["Name" "Website"] auth))
 
 (defn so->describe
   "Describe an SObject"
   [sobject token]
   (request :get
-    (format "/services/data/v%s/sobjects/%s/describe" +version+ sobject) token))
+    (format "/services/data/v%s/sobjects/%s/describe" @+version+ sobject) token))
 
 (comment
-  (describe "Account" token))
+  (so->describe "Account" auth))
 
 (defn so->create
   "Create a new record"
@@ -176,10 +190,10 @@
     { :form-params record
       :content-type :json }]
     (request :post
-      (format "/services/data/v%s/sobjects/Account/" +version+) token params)))
+      (format "/services/data/v%s/sobjects/Account/" @+version+) token params)))
 
 (comment
-  (create "Account" {:Name "My account"} (auth! @conf)))
+  (so->create "Account" {:Name "My new account"} auth))
 
 (defn so->update [])
 
@@ -190,17 +204,11 @@
    - token your api auth info"
   [sobject identifier token]
   (request :delete
-    (format "/services/data/v%s/sobjects/%s/%s" +version+ sobject identifier)
+    (format "/services/data/v%s/sobjects/%s/%s" @+version+ sobject identifier)
     token))
 
 (comment
-  (delete "Account" "001i0000008Ge2OAAS" (auth! @conf)))
-
-(defn recent-items
-  "Returns recently created items for an SObject"
-  [sobject token]
-  (let [response (so->get sobject token)]
-    (:recentItems response)))
+  (so->delete "Account" "001i0000008Ge2OAAS" auth))
 
 ;; Salesforce Object Query Language
 ;; *******************************************************
@@ -220,8 +228,8 @@
   "Executes an arbitrary SOQL query
    i.e SELECT name from Account"
   [query token]
-  (request :get (gen-query-url +version+ query) token))
+  (request :get (gen-query-url @+version+ query) token))
 
 (comment
-  (soql "SELECT name from Account" (auth! @conf)))
+  (soql "SELECT name from Account" auth))
 
