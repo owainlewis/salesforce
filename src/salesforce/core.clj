@@ -57,9 +57,6 @@
        (-> (:body resp)
            (json/decode true))))
 
-(defn token [auth] (:access_token auth))
-
-(defn instance-url [auth] (:instance_url auth))
 
 ;; HTTP request functions
 ;; ******************************************************************************
