@@ -114,21 +114,19 @@
   `(binding [+version+ (latest-version)]
      (do ~@forms)))
 
-(defmacro with-explicit-version [v & forms]
+(defmacro with-version [v & forms]
   `(binding [+version+ ~v] (do ~@forms)))
 
 ;; Resources
 
 (defn resources [token]
-  (with-latest-version
-    (request :get (format "/services/data/v%s/" +version+) token)))
+  (request :get (format "/services/data/v%s/" +version+) token))
 
 ;; Core API methods
 ;; ******************************************************************************
 
 (defn so->all [sobject token]
-  (with-latest-version
-    (request :get (format "/services/data/v%s/sobjects/%s" +version+ sobject) token)))
+  (request :get (format "/services/data/v%s/sobjects/%s" +version+ sobject) token))
 
 (defn s-object-names
   "Returns the name of the sobject and the url"
@@ -150,16 +148,14 @@
        (let [params (->> (into [] (interpose "," fields))
                          (str/join)
                          (conj ["?fields="])
-                         (apply str))]
-  (with-latest-version
-    (let [uri (format "/services/data/v%s/sobjects/%s/%s%s"
-                 +version+ sobject identifier params)
-          response (request :get uri token)]
-      (dissoc response :attributes))))))
+                         (apply str))
+             uri (format "/services/data/v%s/sobjects/%s/%s%s"
+                           +version+ sobject identifier params)
+             response (request :get uri token)]
+         (dissoc response :attributes))))
   ([sobject identifier token]
-  (with-latest-version
     (request :get
-      (format "/services/data/v%s/sobjects/%s/%s" +version+ sobject identifier) token))))
+      (format "/services/data/v%s/sobjects/%s/%s" +version+ sobject identifier) token)))
 
 (comment
   ;; Fetch all the info
@@ -170,9 +166,8 @@
 (defn so->describe
   "Describe an SObject"
   [sobject token]
-  (with-latest-version
-    (request :get
-      (format "/services/data/v%s/sobjects/%s/describe" +version+ sobject) token)))
+  (request :get
+    (format "/services/data/v%s/sobjects/%s/describe" +version+ sobject) token))
 
 (comment
   (describe "Account" token))
@@ -183,9 +178,8 @@
   (let [params
     { :form-params record
       :content-type :json }]
-    (with-latest-version
-      (request :post
-        (format "/services/data/v%s/sobjects/Account/" +version+) token params))))
+    (request :post
+      (format "/services/data/v%s/sobjects/Account/" +version+) token params)))
 
 (comment
   (create "Account" {:Name "My account"} (auth! @conf)))
@@ -198,10 +192,9 @@
    - identifier the object id
    - token your api auth info"
   [sobject identifier token]
-  (with-latest-version
-    (request :delete
-      (format "/services/data/v%s/sobjects/%s/%s" +version+ sobject identifier)
-      token)))
+  (request :delete
+    (format "/services/data/v%s/sobjects/%s/%s" +version+ sobject identifier)
+    token))
 
 (comment
   (delete "Account" "001i0000008Ge2OAAS" (auth! @conf)))
@@ -230,8 +223,7 @@
   "Executes an arbitrary SOQL query
    i.e SELECT name from Account"
   [query token]
-  (with-latest-version
-    (request :get (gen-query-url +version+ query) token)))
+  (request :get (gen-query-url +version+ query) token))
 
 (comment
   (soql "SELECT name from Account" (auth! @conf)))
