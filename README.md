@@ -150,8 +150,8 @@ Salesforce provides a query language called SOQL that lets you run custom querie
 
 ## Contributors
 
-+ Owain Lewis [](https://github.com/owainlewis)
-+ Rod Pugh [](https://github.com/rodnaph)
+Owain Lewis [](https://github.com/owainlewis)
+Rod Pugh [](https://github.com/rodnaph)
 
 ## License
 
