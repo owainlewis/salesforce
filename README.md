@@ -12,7 +12,7 @@ http://www.salesforce.com/us/developer/docs/api_rest/
 It is available from Clojars. : )
 
 ```
-[salesforce "0.1.1-SNAPSHOT"]
+[salesforce "0.1.2-SNAPSHOT"]
 ```
 
 ## Usage
