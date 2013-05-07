@@ -51,6 +51,39 @@ Now you can use your auth-config to make requests to the API.
 (resources auth-info)
 ```
 
+## Setting the API version
+
+There are multiple versions of the Salesforce API so you need to decare the version you want to use.
+
+You can easily get the latest API version with the following function
+
+```clojure
+(latest-version) ;; => "27.0"
+```
+
+You can set a version in several ways.
+
+Globally
+
+```clojure
+(set-version! "27.0")
+```
+
+Inside a macro
+
+```clojure
+(with-version "27.0"
+  ;; Do stuff here )
+
+```
+
+Or just using the latest version (this is slow as it needs to make an additional http request)
+
+```clojure
+(with-latest-version
+  ;; Do stuff here)
+```
+
 ## SObjects
 
 The following methods are available
@@ -62,10 +95,22 @@ The following methods are available
 + so->delete
 + so->describe
 
+Get all sobjects
+
+```clojure
+(so->objects auth-info)
+```
+
 Get all records
 
 ```clojure
+(so->all "Account" auth-info)
+```
 
+Get recently created items
+
+```clojure
+(so->recent "Account" auth-info)
 ```
 
 Get a single record
@@ -103,8 +148,50 @@ Salesforce provides a query language called SOQL that lets you run custom querie
 (soql "SELECT name from Account" auth-info)
 ```
 
-## License
+## A sample session
 
-Copyright © 2013 Owain Lewis
+This final example shows an example REPL session using the API
+
+```clojure
+
+(def config
+  {:client-id ""
+   :client-secret ""
+   :username ""
+   :password ""
+   :security-token ""})
+
+;; Get auth info needed to make http requests
+(def auth (auth! config))
+
+;; Get and then set the latest API version globally
+(set-version! (latest-version))
+
+;; Now we are all set to access the salesforce API
+(so->objects auth)
+
+;; Get all information from accounts
+(so->all "Account" auth)
+
+;; Fetch a single account
+(so->get "Account" "001i0000008Ge2TAAS" auth)
+
+;; Create a new account
+(so->get "Account" "001i0000008Ge2TAAS" auth)
+
+;; Delete the account we just created
+(so->delete "Account" "001i0000008JTPpAAO" auth)
+
+;; Finally use SOQL to find account information
+(:records (soql "SELECT name from Account" auth))
+
+```
+
+## Contributors
+
++ Owain Lewis
++ Rod Pugh
+
+## License
 
 Distributed under the Eclipse Public License, the same as Clojure.
