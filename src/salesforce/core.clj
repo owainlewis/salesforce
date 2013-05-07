@@ -170,9 +170,9 @@
 
 (comment
   ;; Fetch all the info
-  (so->get "Account" "001i0000007nAs3" auth-info)
+  (so->get "Account" "001i0000007nAs3" auth)
   ;; Fetch only the name and website attribute
-  (so->get "Account" "001i0000007nAs3" ["Name" "Website"] auth-info))
+  (so->get "Account" "001i0000007nAs3" ["Name" "Website"] auth))
 
 (defn so->describe
   "Describe an SObject"
@@ -181,7 +181,7 @@
     (format "/services/data/v%s/sobjects/%s/describe" @+version+ sobject) token))
 
 (comment
-  (describe "Account" auth-info))
+  (so->describe "Account" auth))
 
 (defn so->create
   "Create a new record"
@@ -193,7 +193,7 @@
       (format "/services/data/v%s/sobjects/Account/" @+version+) token params)))
 
 (comment
-  (create "Account" {:Name "My account"} auth-info))
+  (so->create "Account" {:Name "My new account"} auth))
 
 (defn so->update [])
 
@@ -208,13 +208,7 @@
     token))
 
 (comment
-  (delete "Account" "001i0000008Ge2OAAS" auth-info))
-
-(defn recent-items
-  "Returns recently created items for an SObject"
-  [sobject token]
-  (let [response (so->get sobject token)]
-    (:recentItems response)))
+  (so->delete "Account" "001i0000008Ge2OAAS" auth))
 
 ;; Salesforce Object Query Language
 ;; *******************************************************
@@ -237,5 +231,5 @@
   (request :get (gen-query-url @+version+ query) token))
 
 (comment
-  (soql "SELECT name from Account" auth-info))
+  (soql "SELECT name from Account" auth))
 

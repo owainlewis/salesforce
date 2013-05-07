@@ -148,10 +148,49 @@ Salesforce provides a query language called SOQL that lets you run custom querie
 (soql "SELECT name from Account" auth-info)
 ```
 
+## A sample session
+
+This final example shows an example REPL session using the API
+
+```clojure
+
+(def config
+  {:client-id ""
+   :client-secret ""
+   :username ""
+   :password ""
+   :security-token ""})
+
+;; Get auth info needed to make http requests
+(def auth (auth! config))
+
+;; Get and then set the latest API version globally
+(set-version! (latest-version))
+
+;; Now we are all set to access the salesforce API
+(so->objects auth)
+
+;; Get all information from accounts
+(so->all "Account" auth)
+
+;; Fetch a single account
+(so->get "Account" "001i0000008Ge2TAAS" auth)
+
+;; Create a new account
+(so->get "Account" "001i0000008Ge2TAAS" auth)
+
+;; Delete the account we just created
+(so->delete "Account" "001i0000008JTPpAAO" auth)
+
+;; Finally use SOQL to find account information
+(:records (soql "SELECT name from Account" auth))
+
+```
+
 ## Contributors
 
-Owain Lewis [](https://github.com/owainlewis)
-Rod Pugh [](https://github.com/rodnaph)
++ Owain Lewis
++ Rod Pugh
 
 ## License
 
