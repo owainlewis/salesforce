@@ -53,13 +53,16 @@ Now you can use your auth-config to make requests to the API.
 
 ## Setting the API version
 
-There are multiple versions of the Salesforce API. You can set a version in several ways.
+There are multiple versions of the Salesforce API so you need to decare the version you want to use.
 
 You can easily get the latest API version with the following function
 
 ```clojure
-(latest-version)
+(latest-version) ;; => "27.0"
 ```
+
+You can set a version in several ways.
+
 Globally
 
 ```clojure
@@ -70,8 +73,15 @@ Inside a macro
 
 ```clojure
 (with-version "27.0"
-  ;; )
+  ;; Do stuff here )
 
+```
+
+Or just using the latest version (this is slow as it needs to make an additional http request)
+
+```clojure
+(with-latest-version
+  ;; Do stuff here)
 ```
 
 ## SObjects
@@ -85,10 +95,22 @@ The following methods are available
 + so->delete
 + so->describe
 
+Get all sobjects
+
+```clojure
+(so->objects auth-info)
+```
+
 Get all records
 
 ```clojure
+(so->all "Account" auth-info)
+```
 
+Get recently created items
+
+```clojure
+(so->recent "Account" auth-info)
 ```
 
 Get a single record
@@ -126,8 +148,11 @@ Salesforce provides a query language called SOQL that lets you run custom querie
 (soql "SELECT name from Account" auth-info)
 ```
 
-## License
+## Contributors
 
-Copyright © 2013 Owain Lewis
++ Owain Lewis [](https://github.com/owainlewis)
++ Rod Pugh [](https://github.com/rodnaph)
+
+## License
 
 Distributed under the Eclipse Public License, the same as Clojure.

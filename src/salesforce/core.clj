@@ -2,8 +2,6 @@
 ;;
 ;; Salesforce API wrapper
 ;;
-;; 2013 Owain Lewis <owain@owainlewis.com>
-;;
 ;; See README.md for documentation
 ;;
 ;; *****************************************
@@ -125,13 +123,26 @@
 ;; Core API methods
 ;; ******************************************************************************
 
-(defn so->all [sobject token]
+(defn so->objects
+  "Lists all of the available sobjects"
+  [token]
+  (request :get (format "/services/data/v%s/sobjects" @+version+) token))
+
+(defn so->all
+  "All sobjects i.e (so->all \"Account\" auth-info)"
+  [sobject token]
   (request :get (format "/services/data/v%s/sobjects/%s" @+version+ sobject) token))
+
+(defn so->recent
+  "The recently created items under an sobject identifier
+   e.g (so->recent \"Account\" auth-info)"
+  [sobject token]
+  (:recentItems (so->all sobject token)))
 
 (defn s-object-names
   "Returns the name of the sobject and the url"
   [token]
-  (->> (so->all token)
+  (->> (so->objects token)
        :sobjects
        (map (juxt :name (comp :sobject :urls)))))
 
@@ -155,7 +166,7 @@
          (dissoc response :attributes))))
   ([sobject identifier token]
     (request :get
-      (format "/services/data/v%s/sobjects/%s/%s" @+version+ sobject identifier) token)))
+     (format "/services/data/v%s/sobjects/%s/%s" @+version+ sobject identifier) token)))
 
 (comment
   ;; Fetch all the info
@@ -170,7 +181,7 @@
     (format "/services/data/v%s/sobjects/%s/describe" @+version+ sobject) token))
 
 (comment
-  (describe "Account" token))
+  (describe "Account" auth-info))
 
 (defn so->create
   "Create a new record"
@@ -182,7 +193,7 @@
       (format "/services/data/v%s/sobjects/Account/" @+version+) token params)))
 
 (comment
-  (create "Account" {:Name "My account"} (auth! @conf)))
+  (create "Account" {:Name "My account"} auth-info))
 
 (defn so->update [])
 
@@ -197,7 +208,7 @@
     token))
 
 (comment
-  (delete "Account" "001i0000008Ge2OAAS" (auth! @conf)))
+  (delete "Account" "001i0000008Ge2OAAS" auth-info))
 
 (defn recent-items
   "Returns recently created items for an SObject"
@@ -226,5 +237,5 @@
   (request :get (gen-query-url @+version+ query) token))
 
 (comment
-  (soql "SELECT name from Account" (auth! @conf)))
+  (soql "SELECT name from Account" auth-info))
 
