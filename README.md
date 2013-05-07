@@ -177,7 +177,7 @@ This final example shows an example REPL session using the API
 (so->get "Account" "001i0000008Ge2TAAS" auth)
 
 ;; Create a new account
-(so->get "Account" "001i0000008Ge2TAAS" auth)
+(so->create "Account" {:Name "My new account"} auth)
 
 ;; Delete the account we just created
 (so->delete "Account" "001i0000008JTPpAAO" auth)
