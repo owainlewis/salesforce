@@ -51,6 +51,29 @@ Now you can use your auth-config to make requests to the API.
 (resources auth-info)
 ```
 
+## Setting the API version
+
+There are multiple versions of the Salesforce API. You can set a version in several ways.
+
+You can easily get the latest API version with the following function
+
+```clojure
+(latest-version)
+```
+Globally
+
+```clojure
+(set-version! "27.0")
+```
+
+Inside a macro
+
+```clojure
+(with-version "27.0"
+  ;; )
+
+```
+
 ## SObjects
 
 The following methods are available

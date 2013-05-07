@@ -88,7 +88,7 @@
 ;; API
 ;; ******************************************************************************
 
-;; Version information
+;; Salesforce API version information
 
 (defn all-versions
   "Lists all available versions of the Salesforce REST API"
@@ -105,25 +105,28 @@
        (into {})
        :version))
 
-(defonce ^{:dynamic true :private true} +version+ "")
+(defonce ^{:dynamic true :private true} +version+ (atom "27.0"))
+
+(defn set-version! [v]
+  (reset! +version+ (atom v)))
 
 (defmacro with-latest-version [& forms]
-  `(binding [+version+ (latest-version)]
+  `(binding [+version+ (atom (latest-version))]
      (do ~@forms)))
 
 (defmacro with-version [v & forms]
-  `(binding [+version+ ~v] (do ~@forms)))
+  `(binding [+version+ (atom ~v)] (do ~@forms)))
 
 ;; Resources
 
 (defn resources [token]
-  (request :get (format "/services/data/v%s/" +version+) token))
+  (request :get (format "/services/data/v%s/" @+version+) token))
 
 ;; Core API methods
 ;; ******************************************************************************
 
 (defn so->all [sobject token]
-  (request :get (format "/services/data/v%s/sobjects/%s" +version+ sobject) token))
+  (request :get (format "/services/data/v%s/sobjects/%s" @+version+ sobject) token))
 
 (defn s-object-names
   "Returns the name of the sobject and the url"
@@ -147,12 +150,12 @@
                          (conj ["?fields="])
                          (apply str))
              uri (format "/services/data/v%s/sobjects/%s/%s%s"
-                           +version+ sobject identifier params)
+                   @+version+ sobject identifier params)
              response (request :get uri token)]
          (dissoc response :attributes))))
   ([sobject identifier token]
     (request :get
-      (format "/services/data/v%s/sobjects/%s/%s" +version+ sobject identifier) token)))
+      (format "/services/data/v%s/sobjects/%s/%s" @+version+ sobject identifier) token)))
 
 (comment
   ;; Fetch all the info
@@ -164,7 +167,7 @@
   "Describe an SObject"
   [sobject token]
   (request :get
-    (format "/services/data/v%s/sobjects/%s/describe" +version+ sobject) token))
+    (format "/services/data/v%s/sobjects/%s/describe" @+version+ sobject) token))
 
 (comment
   (describe "Account" token))
@@ -176,7 +179,7 @@
     { :form-params record
       :content-type :json }]
     (request :post
-      (format "/services/data/v%s/sobjects/Account/" +version+) token params)))
+      (format "/services/data/v%s/sobjects/Account/" @+version+) token params)))
 
 (comment
   (create "Account" {:Name "My account"} (auth! @conf)))
@@ -190,7 +193,7 @@
    - token your api auth info"
   [sobject identifier token]
   (request :delete
-    (format "/services/data/v%s/sobjects/%s/%s" +version+ sobject identifier)
+    (format "/services/data/v%s/sobjects/%s/%s" @+version+ sobject identifier)
     token))
 
 (comment
@@ -220,7 +223,7 @@
   "Executes an arbitrary SOQL query
    i.e SELECT name from Account"
   [query token]
-  (request :get (gen-query-url +version+ query) token))
+  (request :get (gen-query-url @+version+ query) token))
 
 (comment
   (soql "SELECT name from Account" (auth! @conf)))
