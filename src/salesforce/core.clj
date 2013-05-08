@@ -113,7 +113,7 @@
   (memoize latest-version))
 
 (defmacro with-latest-version [& forms]
-  `(binding [+version+ (latest-version*)]
+  `(binding [+version+ (atom (latest-version*))]
      (do ~@forms)))
 
 (defmacro with-version [v & forms]
