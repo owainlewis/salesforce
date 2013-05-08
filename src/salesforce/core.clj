@@ -105,10 +105,14 @@
        (into {})
        :version))
 
+(def latest-version*
+  "Memoized latest-version, used by (with-latest-version) macro"
+  (memoize latest-version))
+
 (defonce ^{:dynamic true :private true} +version+ "")
 
 (defmacro with-latest-version [& forms]
-  `(binding [+version+ (latest-version)]
+  `(binding [+version+ (latest-version*)]
      (do ~@forms)))
 
 (defmacro with-version [v & forms]
