@@ -108,8 +108,12 @@
 (defn set-version! [v]
   (reset! +version+ (atom v)))
 
+(def latest-version*
+  "Memoized latest-version, used by (with-latest-version) macro"
+  (memoize latest-version))
+
 (defmacro with-latest-version [& forms]
-  `(binding [+version+ (atom (latest-version))]
+  `(binding [+version+ (latest-version*)]
      (do ~@forms)))
 
 (defmacro with-version [v & forms]
