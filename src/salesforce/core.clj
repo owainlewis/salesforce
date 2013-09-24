@@ -42,9 +42,11 @@
    - client-secret SECRET
    - username USERNAME
    - password PASSWORD
-   - security-token TOKEN"
-  [{:keys [client-id client-secret username password security-token]}]
-     (let [auth-url "https://login.salesforce.com/services/oauth2/token"
+   - security-token TOKEN
+   - sandbox? IS_SANDBOX"
+  [{:keys [client-id client-secret username password security-token sandbox?]}]
+     (let [login-host (if sandbox? "test.salesforce.com" "login.salesforce.com")
+           auth-url (format "https://%s/services/oauth2/token" login-host)
            params {:grant_type "password"
                    :client_id client-id
                    :client_secret client-secret
@@ -106,7 +108,7 @@
 (defonce ^:dynamic +version+ (atom "27.0"))
 
 (defn set-version! [v]
-  (reset! +version+ (atom v)))
+  (reset! +version+ v))
 
 (def latest-version*
   "Memoized latest-version, used by (with-latest-version) macro"
