@@ -211,9 +211,7 @@
    /services/data/v20.0/query/?q=SELECT+name+from+Account"
   [version query]
   (let [url  (format "/services/data/v%s/query" version)
-        soql (->> (str/split query #"\s+")
-                  (interpose "+")
-                  str/join)]
+        soql (java.net.URLEncoder/encode query "UTF-8")]
     (apply str [url "?q=" soql])))
 
 (defn soql
