@@ -23,6 +23,8 @@ In order to get an auth token and information about your account we call the aut
 like this
 
 ```clojure
+(use 'salesforce.core)
+
 (def config
   {:client-id ""
    :client-secret ""
