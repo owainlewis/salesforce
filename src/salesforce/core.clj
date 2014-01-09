@@ -199,7 +199,7 @@
   (let [params
     { :form-params record
       :content-type :json }]
-    (request :post
+    (request :patch
       (format"/services/data/v%s/sobjects/Account/%s/$s" @+version+ sobject identifier) 
       token params)))
 
