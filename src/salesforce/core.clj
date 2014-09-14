@@ -189,7 +189,19 @@
 (comment
   (so->create "Account" {:Name "My new account"} auth))
 
-(defn so->update [])
+(defn so->update 
+  "Update a record
+   - sojbect the name of the object i.e Account
+   - identifier the object id
+   - record map of data to update object with
+   - token your api auth info"
+  [sobject identifier record token]
+  (let [params
+    { :form-params record
+      :content-type :json }]
+    (request :patch
+      (format"/services/data/v%s/sobjects/Account/%s/$s" @+version+ sobject identifier) 
+      token params)))
 
 (defn so->delete
   "Delete a record
