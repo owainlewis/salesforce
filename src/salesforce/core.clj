@@ -200,7 +200,7 @@
     { :form-params record
       :content-type :json }]
     (request :patch
-      (format"/services/data/v%s/sobjects/Account/%s/$s" @+version+ sobject identifier) 
+      (format "/services/data/v%s/sobjects/Account/%s/$s" @+version+ sobject identifier) 
       token params)))
 
 (defn so->delete
