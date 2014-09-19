@@ -197,10 +197,10 @@
    - token your api auth info"
   [sobject identifier record token]
   (let [params
-    { :form-params record
+    { :body (json/generate-string record)
       :content-type :json }]
     (request :patch
-      (format "/services/data/v%s/sobjects/Account/%s/$s" @+version+ sobject identifier) 
+      (format "/services/data/v%s/sobjects/%s/%s" @+version+ sobject identifier) 
       token params)))
 
 (defn so->delete
