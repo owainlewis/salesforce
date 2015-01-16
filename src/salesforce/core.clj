@@ -43,9 +43,10 @@
    - username USERNAME
    - password PASSWORD
    - security-token TOKEN
-   - sandbox? IS_SANDBOX"
-  [{:keys [client-id client-secret username password security-token sandbox?]}]
-     (let [login-host (if sandbox? "test.salesforce.com" "login.salesforce.com")
+   - sandbox? IS_SANDBOX
+   - sandbox-url URL"
+  [{:keys [client-id client-secret username password security-token sandbox? sandbox-url]}]
+     (let [login-host (if sandbox? (or sandbox-url "test.salesforce.com") "login.salesforce.com")
            auth-url (format "https://%s/services/oauth2/token" login-host)
            params {:grant_type "password"
                    :client_id client-id
