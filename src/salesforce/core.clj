@@ -217,6 +217,23 @@
 (comment
   (so->delete "Account" "001i0000008Ge2OAAS" auth))
 
+(defn so->flow
+  "Invoke a flow (see: https://developer.salesforce.com/docs/atlas.en-us.salesforce_vpm_guide.meta/salesforce_vpm_guide/vpm_distribute_system_rest.htm)
+  - indentifier of flow (e.g. \"Escalate_to_Case\")
+  - inputs map (e.g. {:inputs [{\"CommentCount\" 6
+                                \"FeedItemId\" \"0D5D0000000cfMY\"}]})
+  - token to your api auth info"
+  [identifier token & [data]]
+  (let [params {:body (json/generate-string (or data {:inputs []}))
+                :content-type :json}]
+    (request :post
+      (format "/services/data/v%s/actions/custom/flow/%s" @+version+ identifier)
+      token params)))
+
+(comment
+  (so->flow "Escalate_to_Case" a {:inputs [{"CommentCount" 6
+                                            "FeedItemId" "0D5D0000000cfMY"}]}))
+
 ;; Salesforce Object Query Language
 ;; *******************************************************
 
