@@ -58,6 +58,24 @@
        (-> (:body resp)
            (json/decode true))))
 
+(def ^:private limit-info (atom {}))
+
+(defn- parse-limit-info [v]
+  (let [[used available]
+        (->> (-> (str/split v #"=")
+                 (second)
+                 (str/split #"/"))
+             (map #(Integer/parseInt %)))]
+    {:used used
+     :available available}))
+
+(defn read-limit-info
+  "Deref the value of the `limit-info` atom which is
+   updated with each call to the API. Returns a map,
+   containing the used and available API call counts:
+   {:used 11 :available 15000}"
+  []
+  @limit-info)
 
 ;; HTTP request functions
 ;; ******************************************************************************
@@ -67,15 +85,18 @@
    Token is the full map returned from (auth! @conf)"
   [method url token & params]
   (let [base-url (:instance_url token)
-        full-url (str base-url url)]
-    (->
-      (http/request
-        (merge (or (first params) {})
-          {:method method
-           :url full-url
-           :headers {"Authorization" (str "Bearer " (:access_token token))}}))
-      :body
-      (json/decode true))))
+        full-url (str base-url url)
+        resp (http/request
+               (merge (or (first params) {})
+                      {:method method
+                       :url full-url
+                       :headers {"Authorization" (str "Bearer " (:access_token token))}}))]
+    (-> (get-in resp [:headers "sforce-limit-info"]) ;; Record limit info in atom
+        (parse-limit-info)
+        ((partial reset! limit-info)))
+    (-> resp
+        :body
+        (json/decode true))))
 
 (defn ^:private safe-request
   "Perform a request but catch any exceptions"
