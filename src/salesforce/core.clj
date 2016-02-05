@@ -1,11 +1,3 @@
-;; *****************************************
-;;
-;; Salesforce API wrapper
-;;
-;; See README.md for documentation
-;;
-;; *****************************************
-
 (ns salesforce.core
   (:require
     [clojure.string :as str]
