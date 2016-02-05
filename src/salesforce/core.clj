@@ -24,16 +24,10 @@
   [map]
   (json/generate-string map))
 
-;; Salesforce config variables
-;; ******************************************************************************
-
 (defn conf [f]
   (ref (binding [*read-eval* false]
          (with-open [r (clojure.java.io/reader f)]
            (read (java.io.PushbackReader. r))))))
-
-;; Authentication and request helpers
-;; ******************************************************************************
 
 (defn auth!
   "Get security token and auth info from Salesforce
@@ -77,9 +71,6 @@
   []
   @limit-info)
 
-;; HTTP request functions
-;; ******************************************************************************
-
 (defn ^:private request
   "Make a HTTP request to the Salesforce.com REST API
    Token is the full map returned from (auth! @conf)"
@@ -106,9 +97,6 @@
       (request method url token params)
       {:method method :url url :token token})
   (catch Exception e (.toString e))))
-
-;; API
-;; ******************************************************************************
 
 ;; Salesforce API version information
 
@@ -147,9 +135,6 @@
 
 (defn resources [token]
   (request :get (format "/services/data/v%s/" @+version+) token))
-
-;; Core API methods
-;; ******************************************************************************
 
 (defn so->objects
   "Lists all of the available sobjects"
@@ -256,7 +241,7 @@
                                             "FeedItemId" "0D5D0000000cfMY"}]}))
 
 ;; Salesforce Object Query Language
-;; *******************************************************
+;; ------------------------------------------------------------------------------------
 
 (defn ^:private gen-query-url
   "Given an SOQL string, i.e \"SELECT name from Account\"
