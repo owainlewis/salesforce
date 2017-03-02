@@ -107,7 +107,7 @@
        (into {})
        :version))
 
-(defonce ^:dynamic +version+ (atom "27.0"))
+(defonce ^:dynamic +version+ (atom "38.0"))
 
 (defn set-version! [v]
   (reset! +version+ v))
@@ -250,6 +250,11 @@
   [query token]
   (request :get (gen-query-url @+version+ query) token))
 
-(comment
-  (soql "SELECT name from Account" auth))
+(defn soql-all
+  "By default, Salesforce limits the number of returned results,
+   so calling (soql query) may only return a subset of the total record count.
+   Executes SOQL query and returns ALL records."
+  [query token]
+  (request :get (gen-query-url @+version+ query) token))
+
 

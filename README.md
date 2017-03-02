@@ -5,14 +5,14 @@ the API to be a bit frustrating and hopefully this wrapper will make everything 
 
 More information about the Salesforce REST API can be found at
 
-http://www.salesforce.com/us/developer/docs/api_rest/
+[http://www.salesforce.com/us/developer/docs/api_rest/](http://www.salesforce.com/us/developer/docs/api_rest/)
 
 ## How do I use it?
 
 It is available from Clojars. : )
 
 ```
-[salesforce "1.0.1"]
+[salesforce "1.0.2"]
 ```
 
 ## Usage
@@ -60,7 +60,7 @@ There are multiple versions of the Salesforce API so you need to decare the vers
 You can easily get the latest API version with the following function
 
 ```clojure
-(latest-version) ;; => "27.0"
+(latest-version) ;; => "38.0"
 ```
 
 You can set a version in several ways.
@@ -68,13 +68,13 @@ You can set a version in several ways.
 Globally
 
 ```clojure
-(set-version! "27.0")
+(set-version! "38.0")
 ```
 
 Inside a macro
 
 ```clojure
-(with-version "27.0"
+(with-version "38.0"
   ;; Do stuff here )
 
 ```
@@ -130,6 +130,12 @@ Create a record
 (so->create "Account" {:Name "My Account"} auth-info)
 ```
 
+Update a record
+
+```clojure
+(so->update "Account" {:Name "My New Account Name"} auth-info)
+```
+
 Delete a record
 
 ```clojure
@@ -180,6 +186,10 @@ This final example shows an example REPL session using the API
 
 ;; Create a new account
 (so->create "Account" {:Name "My new account"} auth)
+
+;; Update the account
+(so->update "Account" "001i0000008JTPpAAO" {:Name "My Updated Account Name"} auth)
+
 
 ;; Delete the account we just created
 (so->delete "Account" "001i0000008JTPpAAO" auth)
