@@ -11,7 +11,7 @@
   `(binding [+token+ ~token]
      (do ~@forms)))
 
-(defn ^:private as-json
+(defn-  as-json
   "Takes a Clojure map and returns a JSON string"
   [map]
   (json/generate-string map))
@@ -63,17 +63,18 @@
   []
   @limit-info)
 
-(defn ^:private request
+(defn- request
   "Make a HTTP request to the Salesforce.com REST API
    Token is the full map returned from (auth! @conf)"
-  [method url token & params]
+  [method url token & [params]]
   (let [base-url (:instance_url token)
         full-url (str base-url url)
-        resp (http/request
-               (merge (or (first params) {})
+        resp (try (http/request
+               (merge (or params {})
                       {:method method
                        :url full-url
-                       :headers {"Authorization" (str "Bearer " (:access_token token))}}))]
+                       :headers {"Authorization" (str "Bearer " (:access_token token))}}))  
+              (catch Exception e (:body (ex-data e))))]
     (-> (get-in resp [:headers "sforce-limit-info"]) ;; Record limit info in atom
         (parse-limit-info)
         ((partial reset! limit-info)))
@@ -81,7 +82,7 @@
         :body
         (json/decode true))))
 
-(defn ^:private safe-request
+(defn-  safe-request
   "Perform a request but catch any exceptions"
   [method url token & params]
   (try
@@ -107,7 +108,7 @@
        (into {})
        :version))
 
-(defonce ^:dynamic +version+ (atom "27.0"))
+(defonce ^:dynamic +version+ (atom "39.0"))
 
 (defn set-version! [v]
   (reset! +version+ v))
@@ -250,6 +251,4 @@
   [query token]
   (request :get (gen-query-url @+version+ query) token))
 
-(comment
-  (soql "SELECT name from Account" auth))
 

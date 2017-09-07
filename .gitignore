@@ -8,3 +8,4 @@ pom.xml
 .lein*
 settings.clj
 .nrepl-port
+*.DS_Store
