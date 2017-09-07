@@ -60,7 +60,7 @@ There are multiple versions of the Salesforce API so you need to decare the vers
 You can easily get the latest API version with the following function
 
 ```clojure
-(latest-version) ;; => "38.0"
+(latest-version) ;; => "39.0"
 ```
 
 You can set a version in several ways.
@@ -68,13 +68,13 @@ You can set a version in several ways.
 Globally
 
 ```clojure
-(set-version! "38.0")
+(set-version! "39.0")
 ```
 
 Inside a macro
 
 ```clojure
-(with-version "38.0"
+(with-version "39.0"
   ;; Do stuff here )
 
 ```

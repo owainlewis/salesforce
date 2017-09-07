@@ -66,11 +66,11 @@
 (defn- request
   "Make a HTTP request to the Salesforce.com REST API
    Token is the full map returned from (auth! @conf)"
-  [method url token & params]
+  [method url token & [params]]
   (let [base-url (:instance_url token)
         full-url (str base-url url)
         resp (try (http/request
-               (merge (or (first params) {})
+               (merge (or params {})
                       {:method method
                        :url full-url
                        :headers {"Authorization" (str "Bearer " (:access_token token))}}))  
@@ -248,13 +248,6 @@
 (defn soql
   "Executes an arbitrary SOQL query
    i.e SELECT name from Account"
-  [query token]
-  (request :get (gen-query-url @+version+ query) token))
-
-(defn soql-all
-  "By default, Salesforce limits the number of returned results,
-   so calling (soql query) may only return a subset of the total record count.
-   Executes SOQL query and returns ALL records."
   [query token]
   (request :get (gen-query-url @+version+ query) token))
 
