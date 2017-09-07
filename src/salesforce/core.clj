@@ -108,7 +108,7 @@
        (into {})
        :version))
 
-(defonce ^:dynamic +version+ (atom "38.0"))
+(defonce ^:dynamic +version+ (atom "39.0"))
 
 (defn set-version! [v]
   (reset! +version+ v))
