@@ -3,6 +3,6 @@
   :url "http://owainlewis.com"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.9.0-alpha14"]
-                 [clj-http "3.4.1"]
-                 [cheshire "5.7.0"]])
+  :dependencies [[org.clojure/clojure "1.9.0-alpha16"]
+                 [clj-http "3.7.0"]
+                 [cheshire "5.8.0"]])
