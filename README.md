@@ -34,6 +34,7 @@ like this
 
 (def auth-info (auth! config))
 ```
+You can optionally pass in :login-host if you want to use test.salesforce.com or my.salesforce.com addresses
 
 This returns a map of information about your account including an authorization token that will allow you to make requests to the REST API.
 
