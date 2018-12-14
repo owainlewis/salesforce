@@ -29,11 +29,10 @@
    - username USERNAME
    - password PASSWORD
    - security-token TOKEN
-   - sandbox? IS_SANDBOX
-   - sandbox-url URL"
-  [{:keys [client-id client-secret username password security-token sandbox? sandbox-url]}]
-     (let [login-host (if sandbox? (or sandbox-url "test.salesforce.com") "login.salesforce.com")
-           auth-url (format "https://%s/services/oauth2/token" login-host)
+   - login-host HOSTNAME (default login.salesforce.com"
+  [{:keys [client-id client-secret username password security-token login-host]}]
+     (let [hostname (or login-host "login.salesforce.com")
+           auth-url (format "https://%s/services/oauth2/token" hostname)
            params {:grant_type "password"
                    :client_id client-id
                    :client_secret client-secret
