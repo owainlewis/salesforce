@@ -12,7 +12,7 @@ More information about the Salesforce REST API can be found at
 It is available from Clojars. : )
 
 ```
-[salesforce "1.0.2"]
+[salesforce "1.1.0"]
 ```
 
 ## Usage
@@ -200,7 +200,7 @@ This final example shows an example REPL session using the API
 
 ;; You can also pass a clojure java.jdbc array to the soql query
 ;; The classes on the array will be serialized following the SOQLable protocol, which can be extended in your program.
-(soql ["select * from fruits where name = ? and price >= ? and created = ?" "apple" 9/5 (LocalDate/of 2020 10 10)] auth)
+(soql ["select * from fruits where name = ? and price >= ? and created = ?" "apple" 9/5 (java.time.LocalDate/of 2020 10 10)] auth)
 ```
 
 ## Contributors

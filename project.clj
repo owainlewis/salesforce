@@ -1,6 +1,6 @@
-(defproject lsevero/salesforce "1.1.0-SNAPSHOT"
+(defproject salesforce "1.1.0"
   :description "A clojure library for accessing the salesforce api"
-  :url "https://github.com/lsevero/salesforce"
+  :url "http://owainlewis.com"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.10.2"]
