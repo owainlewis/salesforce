@@ -12,7 +12,7 @@ More information about the Salesforce REST API can be found at
 It is available from Clojars. : )
 
 ```
-[salesforce "1.1.0"]
+[com.owainlewis/salesforce "1.0.2"]
 ```
 
 ## Usage

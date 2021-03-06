@@ -1,8 +1,7 @@
 (ns salesforce.core-test
   (:use clojure.test
         salesforce.core)
-  (:import [java.time LocalDate])
-  )
+  (:import [java.time LocalDate]))
 
 (defmacro with-private-fns [[ns fns] & tests]
   "Refers private fns from ns and runs tests in context."
@@ -35,15 +34,13 @@
                     request (fn [& _] nil)]
         (soql "select * from fruits where name = 'apple' and price >= 1.8 and created = '2020-10-10'" nil)
         (is (= "select * from fruits where name = 'apple' and price >= 1.8 and created = '2020-10-10'"
-               @gen-query-url-spy) "Using the soql String protocol")))
-    )
-  )
+               @gen-query-url-spy) "Using the soql String protocol")))))
 
 ;; Private functions
+
 
 (with-private-fns [salesforce.core [gen-query-url]]
   (deftest gen-query-url-test
     (testing "should generate a valid url for salesforce.com"
       (let [url (gen-query-url "20.0" "SELECT name from Account")]
         (is (= url "/services/data/v20.0/query?q=SELECT+name+from+Account"))))))
-
