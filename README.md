@@ -9,9 +9,9 @@ More information about the Salesforce REST API can be found at
 
 ## Build
 
-[![Clojars Project](https://img.shields.io/clojars/v/com.owainlewis/java-http-clj.svg)](https://clojars.org/com.owainlewis/salesforce)
+[![Clojars Project](https://img.shields.io/clojars/v/com.owainlewis/salesforce.svg)](https://clojars.org/com.owainlewis/salesforce)
 
-[![CircleCI](https://circleci.com/gh/owainlewis/java-http-clj.svg?style=svg)](https://circleci.com/gh/owainlewis/salesforce)
+[![CircleCI](https://circleci.com/gh/owainlewis/salesforce.svg?style=svg)](https://circleci.com/gh/owainlewis/salesforce)
 
 
 ## Usage
