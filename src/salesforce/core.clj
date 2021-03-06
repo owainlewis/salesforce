@@ -2,7 +2,10 @@
   (:require
     [clojure.string :as str]
     [cheshire.core :as json]
-    [clj-http.client :as http]))
+    [clj-http.client :as http]
+    [clojure.string :as str]
+    [clojure.test :refer [is]])
+  (:import [java.time LocalDate Instant ZonedDateTime]))
 
 (def ^:dynamic +token+ nil)
 
@@ -11,7 +14,7 @@
   `(binding [+token+ ~token]
      (do ~@forms)))
 
-(defn-  as-json
+(defn- as-json
   "Takes a Clojure map and returns a JSON string"
   [map]
   (json/generate-string map))
@@ -62,7 +65,7 @@
   []
   @limit-info)
 
-(defn- request
+(defn request
   "Make a HTTP request to the Salesforce.com REST API
    Token is the full map returned from (auth! @conf)"
   [method url token & [params]]
@@ -235,19 +238,62 @@
 ;; Salesforce Object Query Language
 ;; ------------------------------------------------------------------------------------
 
-(defn ^:private gen-query-url
+(defn gen-query-url
   "Given an SOQL string, i.e \"SELECT name from Account\"
    generate a Salesforce SOQL query url in the form:
    /services/data/v20.0/query/?q=SELECT+name+from+Account"
   [version query]
   (let [url  (format "/services/data/v%s/query" version)
         soql (java.net.URLEncoder/encode query "UTF-8")]
-    (apply str [url "?q=" soql])))
+    (str url "?q=" soql)))
 
-(defn soql
-  "Executes an arbitrary SOQL query
-   i.e SELECT name from Account"
-  [query token]
-  (request :get (gen-query-url @+version+ query) token))
+(defprotocol SOQLable
+  (->soql [value] "Serialize the value to a format that Salesforce expect"))
 
+(extend-protocol SOQLable
+  String (->soql [v] (str \' v \'))
+  clojure.lang.Ratio (->soql [v] (-> v double str))
+  Number (->soql [v] (str v))
+  Boolean (->soql [v] (str \' v \'))
+  nil (->soql [v] "'null'")
+  LocalDate (->soql [v] (str \' v \'))
+  Instant (->soql [v] (str \' v \'))
+  ZonedDateTime (->soql [v] (-> v .toInstant (#(str \' % \'))))
+  clojure.lang.APersistentSet (->soql [v]
+                                (->> v
+                                     (map ->soql)
+                                     (interpose \,)
+                                     (apply str)
+                                     (#(str \( % \)))))
+  clojure.lang.Sequential (->soql [v]
+                            (->> v
+                                 (map ->soql)
+                                 (interpose \,)
+                                 (apply str)
+                                 (#(str \( % \)))))
+  )
+(comment (->soql [1 1/3 2.0 true false nil (LocalDate/now) (Instant/now) (ZonedDateTime/now) "Ter\n"]))
+(comment (->soql (set [1 1/3 2.0 true false nil (LocalDate/now) (Instant/now) (ZonedDateTime/now) "Ter\n"])))
+
+(defn sqlvec->query
+  "Receives a Sql vector in the clojure java.jdbc format, for example: [\"select * from fruit where appearance = ?\" \"rosy\"].
+   Return a String with all the '?' set and serialized to the expected format from Salesforce using the SOQLable protocol.
+  
+  Suitable to use with HugSQL sqlvec functions from hugsql.core/def-sqlvec-fns
+  "
+  [[query & args]]
+  {:pre [(-> query string? is) (-> query empty? not is)]}
+  (let [queryf (str/replace query #"\?" "%s")
+        format-query (partial format queryf)]
+    (apply format-query (map ->soql args))))
+(comment (sqlvec->query ["select * from fruit where name = ? and price >= ?" "apple" 9/5]))
+
+(defprotocol Soql
+  (soql [query token] "Executes an arbitrary SOQL query"))
+
+(extend-protocol Soql
+  String (soql [query token]
+           (request :get (gen-query-url @+version+ query) token)) 
+  clojure.lang.Sequential (soql [sqlvec token]
+                            (soql (sqlvec->query sqlvec) token)))
 
