@@ -6,5 +6,11 @@
   :dependencies [[org.clojure/clojure "1.10.2"]
                  [clj-http "3.10.3"]
                  [cheshire "5.10.0"]]
+  :deploy-repositories
+  [["clojars"
+    {:url "https://repo.clojars.org"
+     :username :env/clojars_username
+     :password :env/clojars_password
+     :sign-releases false}]]
   :profiles {:dev {:plugins [[lein-cljfmt "0.7.0"]]
                    :global-vars {*warn-on-reflection* true}}})
