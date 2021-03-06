@@ -7,13 +7,12 @@ More information about the Salesforce REST API can be found at
 
 [http://www.salesforce.com/us/developer/docs/api_rest/](http://www.salesforce.com/us/developer/docs/api_rest/)
 
-## How do I use it?
+## Build
 
-It is available from Clojars. : )
+[![Clojars Project](https://img.shields.io/clojars/v/com.owainlewis/java-http-clj.svg)](https://clojars.org/com.owainlewis/salesforce)
 
-```
-[com.owainlewis/salesforce "1.0.2"]
-```
+[![CircleCI](https://circleci.com/gh/owainlewis/java-http-clj.svg?style=svg)](https://circleci.com/gh/owainlewis/salesforce)
+
 
 ## Usage
 
