@@ -9,3 +9,4 @@ pom.xml
 settings.clj
 .nrepl-port
 *.DS_Store
+.idea
