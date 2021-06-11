@@ -237,10 +237,11 @@
   "Given an SOQL string, i.e \"SELECT name from Account\"
    generate a Salesforce SOQL query url in the form:
    /services/data/v20.0/query/?q=SELECT+name+from+Account"
-  [version query]
-  (let [url  (format "/services/data/v%s/query" version)
+   ([version query] (gen-query-url version "query" query))
+   ([version type query]
+  (let [url  (format "/services/data/v%s/%s" version type)
         soql (java.net.URLEncoder/encode query "UTF-8")]
-    (str url "?q=" soql)))
+    (str url "?q=" soql))))
 
 (defprotocol SOQLable
   (->soql [value] "Serialize the value to a format that Salesforce expect"))
@@ -290,3 +291,12 @@
            (request :get (gen-query-url @+version+ query) token))
   clojure.lang.Sequential (soql [sqlvec token]
                             (soql (sqlvec->query sqlvec) token)))
+
+(defn sosl
+  "Executes an arbitrary SOSL query
+   i.e FIND {Joe Smith} IN Name Fields RETURNING lead"
+  [query token]
+  (request :get (gen-query-url @+version+ "search" query) token))
+
+(comment
+  (sosl "FIND {Joe Smith} IN Name Fields RETURNING lead" auth))

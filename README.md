@@ -156,6 +156,12 @@ Salesforce provides a query language called SOQL that lets you run custom querie
 (soql "SELECT name from Account" auth-info)
 ```
 
+Salesforce provides a search language called SOSL that lets you run custom searches on the API.
+
+```clojure
+(sosl "FIND {Joe Smith} IN Name Fields RETURNING lead" auth-info)
+```
+
 ## A sample session
 
 This final example shows an example REPL session using the API
