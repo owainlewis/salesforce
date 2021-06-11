@@ -133,7 +133,7 @@ Create a record
 Update a record
 
 ```clojure
-(so->update "Account" {:Name "My New Account Name"} auth-info)
+(so->update "Account" "001i0000007nAs3" {:Name "My New Account Name"} auth-info)
 ```
 
 Delete a record
