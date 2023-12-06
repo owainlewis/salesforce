@@ -1,6 +1,5 @@
 (ns salesforce.core
   (:require
-   [clojure.string :as str]
    [cheshire.core :as json]
    [clj-http.client :as http]
    [clojure.string :as str]
@@ -71,10 +70,10 @@
                           {:method method
                            :url full-url
                            :headers {"Authorization" (str "Bearer " (:access_token token))}}))
-                  (catch Exception e (:body (ex-data e))))]
-    (-> (get-in resp [:headers "sforce-limit-info"]) ;; Record limit info in atom
-        (parse-limit-info)
-        ((partial reset! limit-info)))
+                  (catch Exception e (ex-data e)))]
+    (some-> (get-in resp [:headers "sforce-limit-info"]) ;; Record limit info in atom
+            (parse-limit-info)
+            ((partial reset! limit-info)))
     (-> resp
         :body
         (json/decode true))))
