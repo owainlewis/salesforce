@@ -19,7 +19,7 @@ jobs:
           java-version: 21
       - uses: DeLaGuardo/setup-clojure@4c7a6f613e5089821bb3bb2a33a3ee115578580d # 13.6.1
         with:
-          cli: 1.12.5
+          cli: 1.12.5.1654
       - name: Report outdated dependencies
         run: |
           output=$(clojure -Sdeps '{:deps {com.github.liquidz/antq {:mvn/version "2.11.1276"}}}' \
