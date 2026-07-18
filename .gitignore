@@ -6,6 +6,8 @@ pom.xml
 *.jar
 *.class
 .lein*
+.clj-kondo/.cache
+.cpcache
 settings.clj
 .nrepl-port
 *.DS_Store

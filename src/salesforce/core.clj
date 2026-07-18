@@ -1,301 +1,210 @@
 (ns salesforce.core
+  "Backward-compatible facade for salesforce-clj 1.x.
+
+  New applications should create a salesforce.client/client and use the focused
+  salesforce.api, salesforce.sobject, salesforce.query, salesforce.composite and
+  salesforce.bulk2 namespaces."
   (:require
    [cheshire.core :as json]
-   [clj-http.client :as http]
+   [clojure.java.io :as io]
    [clojure.string :as str]
-   [clojure.test :refer [is]])
-  (:import [java.time LocalDate Instant ZonedDateTime]))
+   [salesforce.actions :as actions]
+   [salesforce.api :as api]
+   [salesforce.auth :as auth]
+   [salesforce.client :as client]
+   [salesforce.query :as query]
+   [salesforce.sobject :as sobject])
+  (:import
+   [java.net URLEncoder]
+   [java.nio.charset StandardCharsets]
+   [java.time Instant LocalDate ZonedDateTime]))
 
 (def ^:dynamic +token+ nil)
 
-(defmacro with-token
-  [token & forms]
+(defmacro with-token [token & forms]
   `(binding [+token+ ~token]
      (do ~@forms)))
 
-(defn conf [f]
+(defn conf [file]
   (ref (binding [*read-eval* false]
-         (with-open [r (clojure.java.io/reader f)]
-           (read (java.io.PushbackReader. r))))))
+         (with-open [reader (io/reader file)]
+           (read (java.io.PushbackReader. reader))))))
 
 (defn auth!
-  "Get security token and auth info from Salesforce
-   config is a map in the form
-   - client-id ID
-   - client-secret SECRET
-   - username USERNAME
-   - password PASSWORD
-   - security-token TOKEN
-   - login-host HOSTNAME (default login.salesforce.com"
-  [{:keys [client-id client-secret username password security-token login-host]}]
-  (let [hostname (or login-host "login.salesforce.com")
-        auth-url (format "https://%s/services/oauth2/token" hostname)
-        params {:grant_type "password"
-                :client_id client-id
-                :client_secret client-secret
-                :username username
-                :password (str password security-token)
-                :format "json"}
-        resp (http/post auth-url {:form-params params})]
-    (-> (:body resp)
-        (json/decode true))))
+  "Legacy username-password OAuth flow. Prefer functions in salesforce.auth."
+  [config]
+  (auth/password-token! config))
 
 (def ^:private limit-info (atom {}))
 
-(defn- parse-limit-info [v]
-  (let [[used available]
-        (->> (-> (str/split v #"=")
-                 (second)
-                 (str/split #"/"))
-             (map #(Integer/parseInt %)))]
-    {:used used
-     :available available}))
+(declare +version+)
 
 (defn read-limit-info
-  "Deref the value of the `limit-info` atom which is
-   updated with each call to the API. Returns a map,
-   containing the used and available API call counts:
-   {:used 11 :available 15000}"
+  "Returns legacy API usage as {:used n :available n}."
   []
-  @limit-info)
+  (or (:api-usage @limit-info)
+      (first (vals @limit-info))
+      {}))
+
+(defn- legacy-client [token]
+  (client/client {:instance-url (or (:instance_url token) (:instance-url token))
+                  :access-token (or (:access_token token) (:access-token token))
+                  :api-version @+version+
+                  :limit-info limit-info}))
 
 (defn request
-  "Make a HTTP request to the Salesforce.com REST API
-   Token is the full map returned from (auth! @conf)"
+  "Makes an HTTP request and returns its decoded body.
+
+  This keeps the 1.x signature. New code should use salesforce.client/request-response!
+  when status and headers matter."
   [method url token & [params]]
-  (let [base-url (:instance_url token)
-        full-url (str base-url url)
-        resp (try (http/request
-                   (merge (or params {})
-                          {:method method
-                           :url full-url
-                           :headers {"Authorization" (str "Bearer " (:access_token token))}}))
-                  (catch Exception e (ex-data e)))]
-    (some-> (get-in resp [:headers "sforce-limit-info"]) ;; Record limit info in atom
-            (parse-limit-info)
-            ((partial reset! limit-info)))
-    (-> resp
-        :body
-        (json/decode true))))
-
-(defn-  safe-request
-  "Perform a request but catch any exceptions"
-  [method url token & params]
-  (try
-    (with-meta
-      (request method url token params)
-      {:method method :url url :token token})
-    (catch Exception e (.toString e))))
-
-;; Salesforce API version information
+  (let [params (or params {})
+        params (if (and (= :json (:content-type params)) (:form-params params))
+                 (-> params
+                     (assoc :json-body (:form-params params))
+                     (dissoc :form-params))
+                 params)]
+    (client/request! (legacy-client token) method url params)))
 
 (defn all-versions
-  "Lists all available versions of the Salesforce REST API"
+  "Lists Salesforce REST API versions over HTTPS."
   []
-  (->> (http/get "http://na1.salesforce.com/services/data/")
-       :body
-       (json/parse-string)))
+  (let [response (client/*http-request*
+                  {:method :get
+                   :url "https://login.salesforce.com/services/data/"
+                   :as :text
+                   :throw-exceptions false})]
+    (if (<= 200 (or (:status response) 0) 299)
+      (json/parse-string (:body response))
+      (throw (ex-info "Unable to discover Salesforce API versions"
+                      {:type ::version-discovery-error
+                       :status (:status response)})))))
 
-(defn latest-version
-  "What is the latest API version?"
-  []
-  (->> (last (all-versions))
-       (map (fn [[k _]] [(keyword k) _]))
-       (into {})
-       :version))
+(defn latest-version []
+  (get (last (all-versions)) "version"))
 
+;; The legacy facade deliberately retains the 1.x default. Modern clients default
+;; to the current v67.0 through salesforce.client/default-api-version.
 (defonce ^:dynamic +version+ (atom "39.0"))
 
-(defn set-version! [v]
-  (reset! +version+ v))
+(defn set-version! [version]
+  (reset! +version+ version))
 
-(def latest-version*
-  "Memoized latest-version, used by (with-latest-version) macro"
-  (memoize latest-version))
+(def latest-version* (memoize latest-version))
 
 (defmacro with-latest-version [& forms]
   `(binding [+version+ (atom (latest-version*))]
      (do ~@forms)))
 
-(defmacro with-version [v & forms]
-  `(binding [+version+ (atom ~v)] (do ~@forms)))
-
-;; Resources
+(defmacro with-version [version & forms]
+  `(binding [+version+ (atom ~version)]
+     (do ~@forms)))
 
 (defn resources [token]
-  (request :get (format "/services/data/v%s/" @+version+) token))
+  (api/resources (legacy-client token)))
 
-(defn so->objects
-  "Lists all of the available sobjects"
-  [token]
-  (request :get (format "/services/data/v%s/sobjects" @+version+) token))
+(defn so->objects [token]
+  (sobject/objects (legacy-client token)))
 
-(defn so->all
-  "All sobjects i.e (so->all \"Account\" auth-info)"
-  [sobject token]
-  (request :get (format "/services/data/v%s/sobjects/%s" @+version+ sobject) token))
+(defn so->all [sobject-name token]
+  (sobject/object-info (legacy-client token) sobject-name))
 
-(defn so->recent
-  "The recently created items under an sobject identifier
-   e.g (so->recent \"Account\" auth-info)"
-  [sobject token]
-  (:recentItems (so->all sobject token)))
+(defn so->recent [sobject-name token]
+  (sobject/recent (legacy-client token) sobject-name))
 
 (defn so->get
-  "Fetch a single SObject or passing in a vector of attributes
-   return a subset of the data"
-  ([sobject identifier fields token]
+  ([sobject-name identifier fields token]
    (when (or (seq? fields) (vector? fields))
-     (let [params (->> (into [] (interpose "," fields))
-                       (str/join)
-                       (conj ["?fields="])
-                       (apply str))
-           uri (format "/services/data/v%s/sobjects/%s/%s%s"
-                       @+version+ sobject identifier params)
-           response (request :get uri token)]
-       (dissoc response :attributes))))
-  ([sobject identifier token]
-   (request :get
-            (format "/services/data/v%s/sobjects/%s/%s" @+version+ sobject identifier) token)))
+     (dissoc (sobject/get-record (legacy-client token)
+                                 sobject-name identifier fields)
+             :attributes)))
+  ([sobject-name identifier token]
+   (sobject/get-record (legacy-client token) sobject-name identifier)))
 
-(comment
-  ;; Fetch all the info
-  (so->get "Account" "001i0000007nAs3" auth)
-  ;; Fetch only the name and website attribute
-  (so->get "Account" "001i0000007nAs3" ["Name" "Website"] auth))
+(defn so->describe [sobject-name token]
+  (sobject/describe (legacy-client token) sobject-name))
 
-(defn so->describe
-  "Describe an SObject"
-  [sobject token]
-  (request :get
-           (format "/services/data/v%s/sobjects/%s/describe" @+version+ sobject) token))
+(defn so->create [sobject-name record token]
+  (sobject/create-record! (legacy-client token) sobject-name record))
 
-(comment
-  (so->describe "Account" auth))
+(defn so->update [sobject-name identifier record token]
+  (sobject/update-record! (legacy-client token) sobject-name identifier record))
 
-(defn so->create
-  "Create a new record"
-  [sobject record token]
-  (let [params
-        {:form-params record
-         :content-type :json}]
-    (request :post
-             (format "/services/data/v%s/sobjects/%s/" @+version+ sobject) token params)))
-
-(comment
-  (so->create "Account" {:Name "My new account"} auth))
-
-(defn so->update
-  "Update a record
-   - sojbect the name of the object i.e Account
-   - identifier the object id
-   - record map of data to update object with
-   - token your api auth info"
-  [sobject identifier record token]
-  (let [params
-        {:body (json/generate-string record)
-         :content-type :json}]
-    (request :patch
-             (format "/services/data/v%s/sobjects/%s/%s" @+version+ sobject identifier)
-             token params)))
-
-(defn so->delete
-  "Delete a record
-   - sojbect the name of the object i.e Account
-   - identifier the object id
-   - token your api auth info"
-  [sobject identifier token]
-  (request :delete
-           (format "/services/data/v%s/sobjects/%s/%s" @+version+ sobject identifier)
-           token))
-
-(comment
-  (so->delete "Account" "001i0000008Ge2OAAS" auth))
+(defn so->delete [sobject-name identifier token]
+  (sobject/delete-record! (legacy-client token) sobject-name identifier))
 
 (defn so->flow
-  "Invoke a flow (see: https://developer.salesforce.com/docs/atlas.en-us.salesforce_vpm_guide.meta/salesforce_vpm_guide/vpm_distribute_system_rest.htm)
-  - indentifier of flow (e.g. \"Escalate_to_Case\")
-  - inputs map (e.g. {:inputs [{\"CommentCount\" 6
-                                \"FeedItemId\" \"0D5D0000000cfMY\"}]})
-  - token to your api auth info"
-  [identifier token & [data]]
-  (let [params {:body (json/generate-string (or data {:inputs []}))
-                :content-type :json}]
-    (request :post
-             (format "/services/data/v%s/actions/custom/flow/%s" @+version+ identifier)
-             token params)))
-
-(comment
-  (so->flow "Escalate_to_Case" a {:inputs [{"CommentCount" 6
-                                            "FeedItemId" "0D5D0000000cfMY"}]}))
-
-;; Salesforce Object Query Language
-;; ------------------------------------------------------------------------------------
+  ([identifier token]
+   (actions/invoke-flow! (legacy-client token) identifier))
+  ([identifier token data]
+   (api/request! (legacy-client token) :post
+                 (str "/actions/custom/flow/" (client/path-segment identifier))
+                 {:json-body (or data {:inputs []})})))
 
 (defn gen-query-url
-  "Given an SOQL string, i.e \"SELECT name from Account\"
-   generate a Salesforce SOQL query url in the form:
-   /services/data/v20.0/query/?q=SELECT+name+from+Account"
-   ([version query] (gen-query-url version "query" query))
-   ([version type query]
-  (let [url  (format "/services/data/v%s/%s" version type)
-        soql (java.net.URLEncoder/encode query "UTF-8")]
-    (str url "?q=" soql))))
+  ([version soql]
+   (gen-query-url version "query" soql))
+  ([version type soql]
+   (str "/services/data/v" version "/" type "?q="
+        (URLEncoder/encode (str soql) StandardCharsets/UTF_8))))
 
 (defprotocol SOQLable
-  (->soql [value] "Serialize the value to a format that Salesforce expect"))
+  (->soql [value] "Serializes a value as a SOQL literal."))
 
 (extend-protocol SOQLable
-  String (->soql [v] (str \' v \'))
-  clojure.lang.Ratio (->soql [v] (-> v double str))
-  Number (->soql [v] (str v))
-  Boolean (->soql [v] (str \' v \'))
-  nil (->soql [v] "'null'")
-  LocalDate (->soql [v] (str \' v \'))
-  Instant (->soql [v] (str \' v \'))
-  ZonedDateTime (->soql [v] (-> v .toInstant (#(str \' % \'))))
-  clojure.lang.APersistentSet (->soql [v]
-                                (->> v
-                                     (map ->soql)
-                                     (interpose \,)
-                                     (apply str)
-                                     (#(str \( % \)))))
-  clojure.lang.Sequential (->soql [v]
-                            (->> v
-                                 (map ->soql)
-                                 (interpose \,)
-                                 (apply str)
-                                 (#(str \( % \))))))
-(comment (->soql [1 1/3 2.0 true false nil (LocalDate/now) (Instant/now) (ZonedDateTime/now) "Ter\n"]))
-(comment (->soql (set [1 1/3 2.0 true false nil (LocalDate/now) (Instant/now) (ZonedDateTime/now) "Ter\n"])))
+  String (->soql [value] (query/->soql value))
+  clojure.lang.Ratio (->soql [value] (query/->soql value))
+  Number (->soql [value] (query/->soql value))
+  Boolean (->soql [value] (str "'" value "'"))
+  nil (->soql [_] "'null'")
+  LocalDate (->soql [value] (str "'" value "'"))
+  Instant (->soql [value] (str "'" value "'"))
+  ZonedDateTime (->soql [value] (str "'" (.toInstant value) "'"))
+  clojure.lang.IPersistentSet
+  (->soql [value] (str "(" (str/join "," (sort (map ->soql value))) ")"))
+  clojure.lang.Sequential
+  (->soql [value] (str "(" (str/join "," (map ->soql value)) ")")))
 
 (defn sqlvec->query
-  "Receives a Sql vector in the clojure java.jdbc format, for example: [\"select * from fruit where appearance = ?\" \"rosy\"].
-   Return a String with all the '?' set and serialized to the expected format from Salesforce using the SOQLable protocol.
-
-  Suitable to use with HugSQL sqlvec functions from hugsql.core/def-sqlvec-fns
-  "
-  [[query & args]]
-  {:pre [(-> query string? is) (-> query empty? not is)]}
-  (let [queryf (str/replace query #"\?" "%s")
-        format-query (partial format queryf)]
-    (apply format-query (map ->soql args))))
-(comment (sqlvec->query ["select * from fruit where name = ? and price >= ?" "apple" 9/5]))
+  [[soql & values]]
+  (when (or (not (string? soql)) (str/blank? soql))
+    (throw (ex-info "A non-empty SOQL query string is required"
+                    {:type ::invalid-query})))
+  (loop [characters (seq soql)
+         values (map ->soql values)
+         quoted? false
+         escaped? false
+         result (StringBuilder.)]
+    (if-let [character (first characters)]
+      (if (and (= character \?) (not quoted?))
+        (if-let [value (first values)]
+          (recur (next characters) (next values) quoted? false (.append result value))
+          (throw (ex-info "Not enough values for SOQL placeholders"
+                          {:type ::invalid-query})))
+        (let [quote? (and (= character \') (not escaped?))
+              escaped-next? (and (= character \\) (not escaped?))]
+          (.append result character)
+          (recur (next characters)
+                 values
+                 (if quote? (not quoted?) quoted?)
+                 escaped-next?
+                 result)))
+      (do
+        (when (seq values)
+          (throw (ex-info "Too many values for SOQL placeholders"
+                          {:type ::invalid-query})))
+        (str result)))))
 
 (defprotocol Soql
-  (soql [query token] "Executes an arbitrary SOQL query"))
+  (soql [query token] "Executes an arbitrary SOQL query."))
 
 (extend-protocol Soql
-  String (soql [query token]
-           (request :get (gen-query-url @+version+ query) token))
-  clojure.lang.Sequential (soql [sqlvec token]
-                            (soql (sqlvec->query sqlvec) token)))
+  String
+  (soql [soql-string token]
+    (request :get (gen-query-url @+version+ soql-string) token))
+  clojure.lang.Sequential
+  (soql [sqlvec token]
+    (soql (sqlvec->query sqlvec) token)))
 
-(defn sosl
-  "Executes an arbitrary SOSL query
-   i.e FIND {Joe Smith} IN Name Fields RETURNING lead"
-  [query token]
-  (request :get (gen-query-url @+version+ "search" query) token))
-
-(comment
-  (sosl "FIND {Joe Smith} IN Name Fields RETURNING lead" auth))
+(defn sosl [search-string token]
+  (request :get (gen-query-url @+version+ "search" search-string) token))

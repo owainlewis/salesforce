@@ -1,218 +1,236 @@
-# Salesforce
+# Salesforce for Clojure
 
-This is an up to date wrapper for the Salesforce.com REST API. I initially found working with
-the API to be a bit frustrating and hopefully this wrapper will make everything easy for you.
-
-More information about the Salesforce REST API can be found at
-
-[http://www.salesforce.com/us/developer/docs/api_rest/](http://www.salesforce.com/us/developer/docs/api_rest/)
-
-## Build
-
+[![CI](https://github.com/owainlewis/salesforce/actions/workflows/ci.yml/badge.svg)](https://github.com/owainlewis/salesforce/actions/workflows/ci.yml)
 [![Clojars Project](https://img.shields.io/clojars/v/com.owainlewis/salesforce.svg)](https://clojars.org/com.owainlewis/salesforce)
 
-[![CircleCI](https://circleci.com/gh/owainlewis/salesforce.svg?style=svg)](https://circleci.com/gh/owainlewis/salesforce)
+A modern Clojure client for Salesforce Platform REST APIs.
 
+Version 2 targets Salesforce API v67.0, Summer '26. It provides first-class clients for core data, SOQL and SOSL, Composite APIs, Bulk API 2.0, Actions, Tooling, and GraphQL. A generic versioned request function can access REST resources that use the supported JSON, text, CSV, binary, or streaming request shapes.
 
-## Usage
+The 1.x `salesforce.core` API remains available as a compatibility facade. Its default stays at v39.0 to avoid silently changing existing applications. New clients default to v67.0.
 
-We first need to set up some authentication information as a Clojure map. All the information can be found in your Salesforce account.
+See [API coverage](docs/API_COVERAGE.md) for the exact scope and [migration](docs/MIGRATION.md) for 1.x upgrades.
 
-In order to get an auth token and information about your account we call the auth! function
-like this
+## Install
+
+Version 2 is not released yet. The current stable Clojars release is the legacy 1.x client:
+
+Leiningen:
+
+```clojure
+[com.owainlewis/salesforce "1.0.2"]
+```
+
+Clojure CLI:
+
+```clojure
+com.owainlewis/salesforce {:mvn/version "1.0.2"}
+```
+
+To test version 2 from source, clone this repository, run `lein install`, and use `[com.owainlewis/salesforce "2.0.0-SNAPSHOT"]` locally. The examples below describe version 2.
+
+The project supports Clojure 1.11 and 1.12 on Java 11, 17, and 21.
+
+## Create a client
+
+If your application already has an OAuth access token:
+
+```clojure
+(require '[salesforce.client :as sf])
+
+(def client
+  (sf/client {:instance-url "https://your-domain.my.salesforce.com"
+              :access-token "access-token"
+              :api-version "67.0"}))
+```
+
+Long-running applications can resolve tokens on demand:
+
+```clojure
+(def client
+  (sf/client {:instance-url "https://your-domain.my.salesforce.com"
+              :token-provider #(load-current-access-token)}))
+```
+
+The provider may return a token string or a map containing `:access-token` or `:access_token`.
+
+## OAuth
+
+New Salesforce integrations should use an External Client App and an appropriate OAuth flow. The library supports authorization code with PKCE, refresh token, JWT bearer, client credentials, and the legacy username-password flow.
+
+```clojure
+(require '[salesforce.auth :as auth])
+
+(def token
+  (auth/client-credentials-token!
+   {:client-id "client-id"
+    :client-secret "client-secret"
+    :login-host "my-domain.my.salesforce.com"}))
+
+(def client (sf/client token))
+```
+
+The password flow remains available through `auth/password-token!` and the legacy `salesforce.core/auth!`, but Salesforce recommends stronger flows for new integrations.
+
+## sObjects
+
+```clojure
+(require '[salesforce.sobject :as sobject])
+
+(sobject/objects client)
+(sobject/describe client "Account")
+(sobject/get-record client "Account" "001..." ["Id" "Name"])
+(sobject/create-record! client "Account" {:Name "Acme"})
+(sobject/update-record! client "Account" "001..." {:Name "New name"})
+(sobject/delete-record! client "Account" "001...")
+
+(sobject/upsert-by-external-id!
+ client "Account" "External_Id__c" "customer-42" {:Name "Acme"})
+```
+
+Record, object, field, action, and external ID path components are percent-encoded.
+
+## SOQL, SOSL, and pagination
+
+```clojure
+(require '[salesforce.query :as query])
+
+(def first-page
+  (query/query client "SELECT Id, Name FROM Account ORDER BY Name"))
+
+;; Salesforce nextRecordsUrl values are followed verbatim.
+(into [] (query/records client first-page))
+
+(query/query-all client "SELECT Id FROM Account WHERE IsDeleted = TRUE")
+(query/search client "FIND {Acme} IN NAME FIELDS RETURNING Account(Id, Name)")
+```
+
+Parameterized SOQL keeps values separate from query structure:
+
+```clojure
+(query/sqlvec->query
+ ["SELECT Id FROM Account WHERE Name = ? AND Active__c = ?" "O'Brien" true])
+```
+
+It produces correctly escaped SOQL literals and ignores `?` characters inside quoted strings.
+
+## Composite APIs
+
+```clojure
+(require '[salesforce.composite :as composite])
+
+(composite/composite!
+ client
+ [{:method "POST"
+   :url "/services/data/v67.0/sobjects/Account"
+   :referenceId "account"
+   :body {:Name "Acme"}}
+  {:method "POST"
+   :url "/services/data/v67.0/sobjects/Contact"
+   :referenceId "contact"
+   :body {:LastName "Smith" :AccountId "@{account.id}"}}]
+ true)
+```
+
+The library supports Composite, Batch, Graph, sObject Tree, and sObject Collections. It validates Salesforce request count limits before sending calls.
+
+## Bulk API 2.0
+
+```clojure
+(require '[salesforce.bulk2 :as bulk])
+
+(def job
+  (bulk/create-ingest-job!
+   client {:object "Account"
+           :operation "insert"
+           :contentType "CSV"
+           :lineEnding "LF"}))
+
+(bulk/upload-csv! client (:id job) "Name\nAcme\n")
+(bulk/close-ingest-job! client (:id job))
+
+(bulk/wait-for-job! #(bulk/ingest-job client (:id job)))
+
+;; Returns an InputStream by default.
+(bulk/ingest-results client (:id job) :successful)
+```
+
+Bulk query results return a response envelope so callers can stream CSV and read the opaque `sforce-locator` header:
+
+```clojure
+(bulk/query-results client job-id {:max-records 10000})
+```
+
+For parallel downloads, use `bulk/parallel-result-pages`, follow its opaque `nextRecordsUrl` with `bulk/parallel-result-pages-more`, and download each `resultUrl` with `bulk/download-result-page`.
+
+## Any REST resource
+
+The generic API is the forward-compatibility layer:
+
+```clojure
+(require '[salesforce.api :as api])
+
+;; /services/data/v67.0/limits
+(api/request! client :get "/limits")
+
+;; A new JSON endpoint can work without a library update.
+(api/request! client :post "/newResource" {:json-body {:enabled true}})
+
+;; Instance-relative Apex REST.
+(api/raw-request! client :get "/services/apexrest/orders/42")
+```
+
+Absolute URLs are accepted only when they have the same origin as the configured instance. This prevents bearer tokens being sent to another host.
+
+## Responses and errors
+
+High-level functions return the decoded body. Use the transport when you also need status and headers:
+
+```clojure
+(require '[salesforce.client :as sf])
+
+(sf/request-response! client :get "/services/data/v67.0/limits")
+;; {:status 200
+;;  :headers {...}
+;;  :body {...}
+;;  :request-id "..."
+;;  :limit-info {:api-usage {:used 11 :available 15000}}}
+```
+
+JSON is keywordized. Empty 204 responses return `nil`. Text, byte arrays, and streams are available with `:as :text`, `:as :bytes`, and `:as :stream`.
+
+Non-2xx responses throw `ExceptionInfo`. `ex-data` includes `:status`, `:error-code`, `:message`, `:fields`, `:request-id`, response headers, and the decoded body. Access tokens are never included.
+
+The client has conservative connect and socket timeouts. Automatic retries are intentionally not applied to mutations because replaying a Salesforce create can duplicate data. Add bounded retry logic around operations that are safe for your application.
+
+## Legacy API
+
+Existing code can continue to use:
 
 ```clojure
 (use 'salesforce.core)
 
-(def config
-  {:client-id ""
-   :client-secret ""
-   :username ""
-   :password ""
-   :security-token ""})
-
-(def auth-info (auth! config))
-```
-You can optionally pass in :login-host if you want to use test.salesforce.com or my.salesforce.com addresses
-
-This returns a map of information about your account including an authorization token that will allow you to make requests to the REST API.
-
-The response looks something like this
-
-```clojure
-{:id "https://login.salesforce.com/id/1234",
- :issued_at "1367488271359",
- :instance_url "https://na15.salesforce.com",
- :signature "1234",
- :access_token "1234"}
+(def token (auth! config))
+(with-version "67.0"
+  (so->get "Account" "001..." token))
 ```
 
-Now you can use your auth-config to make requests to the API.
+All public 1.x vars and arities remain present. Error handling is now structured and empty successful responses correctly return `nil`. See [migration notes](docs/MIGRATION.md).
 
-```clojure
-(resources auth-info)
+## Development
+
+```bash
+lein test
+lein with-profile +clojure-1.12 test
+lein cljfmt check
+lein check
+clj-kondo --lint src test
+lein jar
 ```
 
-## Setting the API version
+The manual `Salesforce live smoke` GitHub workflow runs read-only discovery, limits, and SOQL checks against a configured test org.
 
-There are multiple versions of the Salesforce API so you need to decare the version you want to use.
-
-You can easily get the latest API version with the following function
-
-```clojure
-(latest-version) ;; => "39.0"
-```
-
-You can set a version in several ways.
-
-Globally
-
-```clojure
-(set-version! "39.0")
-```
-
-Inside a macro
-
-```clojure
-(with-version "39.0"
-  ;; Do stuff here )
-
-```
-
-Or just using the latest version (this is slow as it needs to make an additional http request)
-
-```clojure
-(with-latest-version
-  ;; Do stuff here)
-```
-
-## SObjects
-
-The following methods are available
-
-+ so->all
-+ so->get
-+ so->create
-+ so->update
-+ so->delete
-+ so->describe
-
-Get all sobjects
-
-```clojure
-(so->objects auth-info)
-```
-
-Get all records
-
-```clojure
-(so->all "Account" auth-info)
-```
-
-Get recently created items
-
-```clojure
-(so->recent "Account" auth-info)
-```
-
-Get a single record
-
-```clojure
-;; Fetch all the info
-(so->get "Account" "001i0000007nAs3" auth-info)
-;; Fetch only the name and website attributes
-(so->get "Account" "001i0000007nAs3" ["Name" "Website"] auth-info))
-```
-
-Create a record
-
-```clojure
-(so->create "Account" {:Name "My Account"} auth-info)
-```
-
-Update a record
-
-```clojure
-(so->update "Account" "001i0000007nAs3" {:Name "My New Account Name"} auth-info)
-```
-
-Delete a record
-
-```clojure
-(so->delete "Account" "001i0000008Ge2OAAS" auth-info)
-```
-
-Describe an record
-
-```clojure
-(so->describe "Account" auth-info)
-```
-
-## Salesforce Object Query Language
-
-Salesforce provides a query language called SOQL that lets you run custom queries on the API.
-
-```clojure
-(soql "SELECT name from Account" auth-info)
-```
-
-Salesforce provides a search language called SOSL that lets you run custom searches on the API.
-
-```clojure
-(sosl "FIND {Joe Smith} IN Name Fields RETURNING lead" auth-info)
-```
-
-## A sample session
-
-This final example shows an example REPL session using the API
-
-```clojure
-
-(def config
-  {:client-id ""
-   :client-secret ""
-   :username ""
-   :password ""
-   :security-token ""})
-
-;; Get auth info needed to make http requests
-(def auth (auth! config))
-
-;; Get and then set the latest API version globally
-(set-version! (latest-version))
-
-;; Now we are all set to access the salesforce API
-(so->objects auth)
-
-;; Get all information from accounts
-(so->all "Account" auth)
-
-;; Fetch a single account
-(so->get "Account" "001i0000008Ge2TAAS" auth)
-
-;; Create a new account
-(so->create "Account" {:Name "My new account"} auth)
-
-;; Update the account
-(so->update "Account" "001i0000008JTPpAAO" {:Name "My Updated Account Name"} auth)
-
-
-;; Delete the account we just created
-(so->delete "Account" "001i0000008JTPpAAO" auth)
-
-;; Finally use SOQL to find account information
-(:records (soql "SELECT name from Account" auth))
-
-;; You can also pass a clojure java.jdbc array to the soql query
-;; The classes on the array will be serialized following the SOQLable protocol, which can be extended in your program.
-(soql ["select * from fruits where name = ? and price >= ? and created = ?" "apple" 9/5 (java.time.LocalDate/of 2020 10 10)] auth)
-```
-
-## Contributors
-
-+ Owain Lewis
-+ Rod Pugh
-+ Lucas Severo
+See [CONTRIBUTING.md](CONTRIBUTING.md) for release and pull request guidance.
 
 ## License
 
