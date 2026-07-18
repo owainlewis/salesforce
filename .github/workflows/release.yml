@@ -23,6 +23,7 @@ jobs:
           distribution: temurin
           java-version: ${{ matrix.java }}
           cache: maven
+          cache-dependency-path: project.clj
       - uses: DeLaGuardo/setup-clojure@4c7a6f613e5089821bb3bb2a33a3ee115578580d # 13.6.1
         with:
           lein: 2.13.0
@@ -43,6 +44,7 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: maven
+          cache-dependency-path: project.clj
       - uses: DeLaGuardo/setup-clojure@4c7a6f613e5089821bb3bb2a33a3ee115578580d # 13.6.1
         with:
           lein: 2.13.0
@@ -51,6 +53,14 @@ jobs:
       - run: lein check
       - run: clj-kondo --lint src test
       - run: lein jar
+      - run: lein pom
+      - name: Scan dependencies
+        uses: google/osv-scanner-action/osv-scanner-action@8dc09193bb540e09b23da07ad7e30bd33bf87018 # v2.3.8
+        with:
+          scan-args: |-
+            --no-ignore
+            --no-resolve
+            ./
 
   publish:
     needs: [test, quality]
@@ -63,6 +73,7 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: maven
+          cache-dependency-path: project.clj
       - uses: DeLaGuardo/setup-clojure@4c7a6f613e5089821bb3bb2a33a3ee115578580d # 13.6.1
         with:
           lein: 2.13.0
