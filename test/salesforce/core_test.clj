@@ -1,6 +1,7 @@
 (ns salesforce.core-test
-  (:use clojure.test
-        salesforce.core)
+  (:require
+   [clojure.test :refer [deftest is testing]]
+   [salesforce.core :refer [+version+ gen-query-url request soql with-version]])
   (:import [java.time LocalDate]))
 
 (defmacro with-private-fns [[ns fns] & tests]
@@ -37,7 +38,6 @@
                @gen-query-url-spy) "Using the soql String protocol")))))
 
 ;; Private functions
-
 
 (with-private-fns [salesforce.core [gen-query-url]]
   (deftest gen-query-url-test
