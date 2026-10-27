@@ -5,7 +5,7 @@ Maintained by the project's agents and the owner. See `AGENTS.md` for how items 
 ## Now
 
 - Release 2.0.0 (needs the owner): run the live smoke workflow against a test org, set the version, tag `v2.0.0`.
-- Track Salesforce's Winter '27 release and move new clients to its API version once it is generally available.
+- Move new clients to the next Salesforce API version once it is generally available (v67.0 is Summer '26).
 
 ## Next
 
