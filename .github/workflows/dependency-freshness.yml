@@ -22,9 +22,11 @@ jobs:
           cli: 1.12.5.1654
       - name: Report outdated dependencies
         run: |
+          # antq exits non-zero when it finds outdated dependencies, so capture
+          # the report first and fail afterwards with it in the log.
           output=$(clojure -Sdeps '{:deps {com.github.liquidz/antq {:mvn/version "2.11.1276"}}}' \
-            -M -m antq.core --skip=github-action \
-            '--error-format=::error file={{file}}::{{name}} {{version}} -> {{latest-version}}')
+            -M -m antq.core --skip=github-action --exclude=org.clojure/clojure \
+            '--error-format=::error file={{file}}::{{name}} {{version}} -> {{latest-version}}') || true
           if [[ -n "$output" ]]; then
             echo "$output"
             exit 1

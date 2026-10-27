@@ -14,11 +14,13 @@
 - Bulk API 2.0 ingest and query lifecycles with streamed CSV results
 - Actions, Tooling, GraphQL, and generic future REST resource access
 - Java 11, 17, and 21 plus Clojure 1.11 and 1.12 CI coverage
+- `AGENTS.md` maintainer charter, `ROADMAP.md`, and issue templates
 
 ### Changed
 
 - Updated Clojure, clj-http, Cheshire, Jackson, and build tooling
 - Replaced CircleCI master deployment with GitHub Actions and protected tag releases
+- The weekly dependency freshness check now prints the outdated dependencies instead of failing silently, and no longer flags the Clojure version floor
 - Fixed JSON create bodies, caller header merging, HTTPS version discovery, URL encoding, and SOQL placeholder parsing
 - Non-2xx responses now throw structured `ExceptionInfo`
 
