@@ -18,7 +18,7 @@ jobs:
         clojure: ["1.11", "1.12"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v5
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v5
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v5
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v5
         with:
           distribution: temurin
           java-version: 21
@@ -55,7 +55,7 @@ jobs:
       - run: lein jar
       - run: lein pom
       - name: Scan dependencies
-        uses: google/osv-scanner-action/osv-scanner-action@8e5cf47b818121e8b405931c82126c2630b0b20d # v2.3.8
+        uses: google/osv-scanner-action/osv-scanner-action@9a96bc4d2b09685b6142bcfe25a3dc17cb2d7347 # v2.3.8
         with:
           scan-args: |-
             --no-ignore
@@ -68,7 +68,7 @@ jobs:
     environment: clojars
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v5
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v5
         with:
           distribution: temurin
           java-version: 21
